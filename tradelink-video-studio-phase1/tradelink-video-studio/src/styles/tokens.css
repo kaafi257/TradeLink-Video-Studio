@@ -1,0 +1,18 @@
+/* TradeLink brand values verified in the Phase 0 inspection of the marketplace stylesheet. */
+:root {
+  --deep: #0b4f86;
+  --ocean: #0b6bb0;
+  --teal: #1479c2;
+  --blue: #087bd4;
+  --gold: #e9a914;
+  --gold-light: #f6c54a;
+  --ink: #163d5d;
+  --muted: #687b76;
+  --line: #e5e9e7;
+  --page: #f8f9fa;
+  --navy: #073256;
+  --danger: #b3261e;
+  --radius: 12px;
+  --font-body: 'Public Sans', 'Noto Sans Ethiopic', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Bricolage Grotesque', 'Noto Sans Ethiopic', system-ui, sans-serif;
+}
