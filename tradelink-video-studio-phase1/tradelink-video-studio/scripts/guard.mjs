@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer';
 // Repository guard. Fails the build if a secret or a marketplace reference is found where it must not be.
 // Dependency-free so it runs anywhere:  node scripts/guard.mjs
 import { readdirSync, readFileSync, statSync } from 'node:fs';

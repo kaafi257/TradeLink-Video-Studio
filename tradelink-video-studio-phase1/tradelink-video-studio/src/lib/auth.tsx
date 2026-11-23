@@ -52,7 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const aal = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
     setMfa({
       hasVerifiedFactor: (factors.data?.totp?.length ?? 0) > 0,
-      level: aal.data?.currentLevel ?? null,
+      level: (aal.data?.currentLevel as 'aal1' | 'aal2' | null | undefined) ?? null,
     });
   }, []);
 
