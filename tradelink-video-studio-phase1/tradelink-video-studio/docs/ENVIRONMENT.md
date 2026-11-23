@@ -11,3 +11,11 @@ MARKETPLACE_PUBLISHABLE_KEY (Studio Supabase Edge Function secrets, Phase 2); NI
 STUDIO_SUPABASE_SECRET_KEY (GitHub Actions secrets, Phase 3).
 
 Never put a secret in a `VITE_` variable: those values are published in the web pages.
+
+## Phase 2 (Edge Function secrets in the Studio project; never VITE_ and never in git)
+
+| Secret | Purpose |
+| --- | --- |
+| MARKETPLACE_URL | Plain https address of the marketplace Supabase project |
+| MARKETPLACE_PUBLISHABLE_KEY | The marketplace's PUBLISHABLE (anon) key only |
+| NIGHTLY_SYNC_SECRET | Long random value the scheduler sends in the `x-sync-secret` header |
