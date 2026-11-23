@@ -15,6 +15,7 @@ export function Layout() {
           <NavLink to="/" end>
             {t('nav.dashboard')}
           </NavLink>
+          <NavLink to="/catalogue">{t('nav.catalogue')}</NavLink>
           <NavLink to="/settings">{t('nav.settings')}</NavLink>
         </nav>
         <div className="topbar-right">
