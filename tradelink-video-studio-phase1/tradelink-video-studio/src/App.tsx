@@ -6,6 +6,7 @@ import { useI18n } from './i18n/i18n';
 import { Layout } from './components/Layout';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
+import { Catalogue } from './pages/Catalogue';
 import { Settings } from './pages/Settings';
 import { AccessDenied } from './pages/AccessDenied';
 import { MfaEnroll } from './pages/MfaEnroll';
@@ -52,6 +53,7 @@ export function App() {
         </Route>
         <Route element={<RequireMember />}>
           <Route index element={<Dashboard />} />
+          <Route path="/catalogue" element={<Catalogue />} />
           <Route path="/settings" element={<Settings />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

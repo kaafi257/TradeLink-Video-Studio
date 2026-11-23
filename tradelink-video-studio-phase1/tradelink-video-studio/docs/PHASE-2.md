@@ -30,7 +30,7 @@ products. Do not run a sync until you have.
 2. Close item F6.
 3. In the Studio project, set Edge Function secrets: MARKETPLACE_URL, MARKETPLACE_PUBLISHABLE_KEY, NIGHTLY_SYNC_SECRET.
 4. Deploy `sync-catalogue` yourself (this repository's rules forbid Claude from deploying).
-5. Run one manual sync as the owner, then check `select * from sync_runs order by started_at desc limit 5;`.
+5. Open the Catalogue page and press "Sync now" as the owner (or call the function yourself), then check `select * from sync_runs order by started_at desc limit 5;`.
 
 ## Tested
 - Allowlist and paging logic: 12 Vitest tests with a mocked fetch (paging, failure of any page, unexpected column,
@@ -41,4 +41,5 @@ products. Do not run a sync until you have.
 ## NOT tested
 - The Edge Function itself (Deno is not installed here, so `index.ts` has never been run or type-checked).
 - Any request to the real marketplace, and the real service-role/RPC permissions on Supabase.
-- No screen shows sync status yet (Phase 2 UI: a "Sync now" button and last-run panel is still to do).
+- The new Catalogue page ("Sync now" for the owner, last 10 runs for members) builds and type-checks but has not been looked at in a browser or run against a real Studio project. Its Amharic text is DRAFT.
+- There is still no nightly scheduler (nothing calls the function on a timetable yet).
