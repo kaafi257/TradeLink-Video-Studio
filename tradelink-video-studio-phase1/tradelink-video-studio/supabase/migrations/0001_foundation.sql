@@ -191,12 +191,14 @@ begin
       select coalesce(jsonb_agg(n.key), '[]'::jsonb)
       from jsonb_each(to_jsonb(new)) as n
       where n.value is distinct from (to_jsonb(old) -> n.key)
+        and n.key not in ('updated_at', 'updated_by')
     ))
   );
   return new;
 end;
 $$;
 revoke all on function public.log_change() from public, anon, authenticated;
+revoke all on function public.guard_last_owner(), public.stamp_settings(), public.block_audit_changes() from public, anon, authenticated;
 
 create trigger profiles_audit
   after update on public.profiles
