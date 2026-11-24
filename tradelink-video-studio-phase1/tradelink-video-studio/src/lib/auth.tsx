@@ -71,8 +71,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Do not await other Supabase calls inside this callback (it can deadlock); defer instead.
     const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s);
+      // Keep the app in its loading state until the profile for this session has been read.
+      // Otherwise a fresh sign-in briefly has a session but no profile and is sent to "No access".
+      setLoading(true);
       setTimeout(() => {
-        void loadFor(s);
+        void loadFor(s).finally(() => {
+          if (!cancelled) setLoading(false);
+        });
       }, 0);
     });
     return () => {

@@ -1,45 +1,40 @@
-# Phase 2: catalogue sync (code written, NOT deployed, NOT run)
+# Phase 2: independent catalogue (built, NOT deployed, NOT applied)
 
-## Plan in one paragraph
-A Studio Edge Function (`sync-catalogue`) reads the ten verified public marketplace views with HTTP GET only,
-500 rows per page, explicit column lists, and stores a read-only copy in the Studio database
-(`catalogue_items`, with a log in `sync_runs`). The whole copy is replaced in one database transaction, so
-a failed sync never leaves a half-updated catalogue. Nothing here touches the marketplace except those GETs.
+The Studio keeps its own catalogue in its own Supabase project. It never contacts the TradeLink marketplace.
+The marketplace sync from the earlier Phase 2 draft was removed (see "Removed" below).
 
-## Files
-- `supabase/migrations/0003_catalogue.sql` (awaiting your review; rollback and policy tests in `supabase/review/`)
-- `supabase/functions/_shared/allowlist.ts`: the verified views and columns, URL builder, row and address checks
-- `supabase/functions/_shared/sync.ts`: paging and "any failure fails the whole sync"
-- `supabase/functions/sync-catalogue/index.ts`: the Edge Function (owner button or nightly secret)
+## What was built
+- Catalogue section: Overview, Products, Categories, Suppliers, Campaigns, Sync Settings (display only).
+- Products: add, edit, details, image upload/replace/remove, activate/deactivate, search, category and status
+  filters, sorting, delete with confirmation. Nothing is pre-filled; blank optional fields stay empty.
+- Image approval: a product is usable for video only when it is active and its image is approved
+  (`videoEligible()` in `src/lib/catalogue.ts`). Approval needs an image; changing the image resets approval.
+- Amharic UI text (DRAFT, needs native-speaker review). Noto Sans Ethiopic (OFL) is included in `public/fonts`.
 
-## Safeguards built in
-- Only the ten allowlisted views; `select=*` is impossible (explicit columns); rows with any extra column are rejected.
-- GET only, redirects refused, 10 second timeout per page, at most 40 pages per view.
-- Marketplace address must be plain `https://host`; address and key exist only as Edge Function secrets.
-- Only the signed-in owner (verified with `is_owner()`) or the nightly secret can start a sync; one run at a time.
-- Nightly runs also require `app_settings.nightly_sync_enabled = true` (it is false by default).
-- The copy is readable by active Studio members only; nobody but the Edge Function can write it.
+## Database: `supabase/migrations/0004_catalogue.sql` (apply yourself, after 0001 to 0003)
+Tables: `categories`, `suppliers`, `products`, `campaigns`, `campaign_products`. Empty. Constraints: prices >= 0,
+sale price needs a retail price and must be lower, approval needs an image, campaign end >= start, unique
+category and supplier names (case-insensitive). It also drops the unused 0003 sync tables if present.
+Security: RLS on every table. Members read; editors and the owner insert, update, delete; viewers read only; anon nothing.
+`created_*` and `updated_*` can only be set by triggers (column-level grants). Changes are written to `audit_log`
+(column names only). Rollback: `supabase/review/0004_catalogue.rollback.sql`.
 
-## BLOCKER before the first sync
-Pending item F6 (MARKETPLACE_INTEGRATION.md): you have not yet confirmed that the live marketplace still loads
-products. Do not run a sync until you have.
+## Storage
+Reuses the private `source-images` bucket (10 MB; JPEG, PNG, WebP). Folders: products/, categories/, suppliers/,
+campaigns/. New policies: members read; editors and owner upload and delete inside those folders only.
+Images are shown through temporary signed links.
 
-## Owner steps (in order; Claude does none of these)
-1. Review `0003_catalogue.sql`, apply it in the Studio SQL editor, then run `review/0003_catalogue.policy-tests.sql`
-   (expect "ALL CATALOGUE TESTS PASSED").
-2. Close item F6.
-3. In the Studio project, set Edge Function secrets: MARKETPLACE_URL, MARKETPLACE_PUBLISHABLE_KEY, NIGHTLY_SYNC_SECRET.
-4. Deploy `sync-catalogue` yourself (this repository's rules forbid Claude from deploying).
-5. Open the Catalogue page and press "Sync now" as the owner (or call the function yourself), then check `select * from sync_runs order by started_at desc limit 5;`.
+## Tests
+- SQL: `supabase/review/0004_catalogue.policy-tests.sql` (run it after applying; expect "ALL CATALOGUE POLICY TESTS PASSED").
+- Unit tests for the catalogue rules; lint, typecheck and build.
+- Browser test (Playwright, phone and desktop) against a simulated backend. It is not a real Supabase project.
 
-## Tested
-- Allowlist and paging logic: 12 Vitest tests with a mocked fetch (paging, failure of any page, unexpected column,
-  unsafe address, runaway paging, GET/no-redirect).
-- 0003 applied, policy-tested and rolled back on a throwaway local Postgres 16 with stubbed `auth`/`storage` schemas
-  (not a real Supabase project, so Supabase-specific behaviour such as the real `auth.uid()` is not covered).
+## Removed
+The `sync-catalogue` Edge Function, its shared modules and tests, and the old Catalogue sync page. The code remains in
+git history. Marketplace sync may only be built in a later, separately approved phase.
 
-## NOT tested
-- The Edge Function itself (Deno is not installed here, so `index.ts` has never been run or type-checked).
-- Any request to the real marketplace, and the real service-role/RPC permissions on Supabase.
-- The new Catalogue page ("Sync now" for the owner, last 10 runs for members) builds and type-checks but has not been looked at in a browser or run against a real Studio project. Its Amharic text is DRAFT.
-- There is still no nightly scheduler (nothing calls the function on a timetable yet).
+## Not verified
+- Anything against your real Supabase project (apply 0004, then try it).
+- Byte-level image upload in the browser test (the simulated storage serves a stand-in picture).
+- Owner sign-in with the authenticator app (the test used editor and viewer accounts).
+- Amharic wording; the other Studio font files (Public Sans, Bricolage Grotesque) are still missing from `public/fonts`.

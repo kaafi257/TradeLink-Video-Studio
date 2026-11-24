@@ -18,17 +18,12 @@
   font-weight: 600;
   font-display: swap;
 }
+/* Amharic: Noto Sans Ethiopic (SIL Open Font License, see /fonts/NotoSansEthiopic-OFL.txt).
+   Variable font from the official google/fonts repository, subset to Latin basics + Ethiopic. */
 @font-face {
   font-family: 'Noto Sans Ethiopic';
-  src: url('/fonts/NotoSansEthiopic-Regular.woff2') format('woff2');
-  font-weight: 400;
-  font-display: swap;
-  unicode-range: U+1200-137F, U+1380-139F, U+2D80-2DDF, U+AB00-AB2F;
-}
-@font-face {
-  font-family: 'Noto Sans Ethiopic';
-  src: url('/fonts/NotoSansEthiopic-SemiBold.woff2') format('woff2');
-  font-weight: 600;
+  src: url('/fonts/NotoSansEthiopic-Variable.woff2') format('woff2');
+  font-weight: 100 900;
   font-display: swap;
   unicode-range: U+1200-137F, U+1380-139F, U+2D80-2DDF, U+AB00-AB2F;
 }
