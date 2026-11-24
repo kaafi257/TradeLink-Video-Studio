@@ -1,0 +1,17 @@
+{
+  "name": "tradelink-video-studio-renderer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local Windows renderer for TradeLink Video Studio. Free software only: Node.js and FFmpeg.",
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node src/main.js",
+    "once": "node src/main.js --once",
+    "check": "node src/main.js --check",
+    "test": "node --test \"test/*.test.js\""
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0"
+  }
+}

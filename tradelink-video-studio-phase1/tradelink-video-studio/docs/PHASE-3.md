@@ -1,6 +1,6 @@
 # Phase 3: Automatic Video Studio (work in progress)
 
-Status: Stage 1 (database) written and tested on a throwaway local database. NOT applied to the Studio project.
+Status: Stage 1 (database, applied and tested live), Stage 2 (scene generator) and Stage 3 (wizard) are merged. Stage 4 (local renderer) is in `renderer/`; its install guide is `docs/WINDOWS-RENDERER.md`.
 
 ## Stage 1: `supabase/migrations/0005_video_studio.sql`
 Requires 0001, 0002 and 0004. Run it ONCE in the Studio project's SQL Editor, only after review. Then run
@@ -29,4 +29,4 @@ Rules enforced by the database, not only the app:
 The renderer never receives a service-role key.
 
 ## Not built yet
-Stage 2 scene generator, Stage 3 wizard UI, Stage 4 Windows renderer, Stage 5 export package and install guide.
+Stage 5: export package polish, completion report and final end-to-end test against the live project.
