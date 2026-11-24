@@ -33,7 +33,7 @@ independent of the TradeLink marketplace. Read this file at the start of every s
 - Web app: React + TypeScript + Vite, plain CSS with design tokens, deployed on its own Vercel project.
 - Backend: its own Supabase project (Auth, Postgres with row-level security, private Storage,
   Edge Functions). Public sign-up is disabled; one owner at first, roles owner/editor/viewer.
-- Rendering (later phases): FFmpeg run by GitHub Actions. 1080x1920, 30 fps, H.264, yuv420p.
+- Rendering (Phase 3): a separate Node.js program run on the owner's Windows PC, using free FFmpeg and ffprobe. It signs in as a dedicated low-privilege renderer account (never a service-role key). 1080x1920, 30 fps, H.264, yuv420p.
 - Marketplace link (Phase 2, not before): one-way, read-only copy of the catalogue.
 
 ## Marketplace integration rules (for Phase 2; do not build in Phase 1)
