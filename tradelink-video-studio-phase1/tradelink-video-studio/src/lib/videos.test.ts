@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { availableActions, formatHashtags, isEditable, parseHashtags, parseSeconds, postText, sceneTotalMs, timeMatches, VIDEO_STATUSES } from './videos';
+import { availableActions, formatHashtags, isEditable, parseHashtags, parseSeconds, postText, describeFile, sceneTotalMs, timeMatches, VIDEO_STATUSES } from './videos';
 
 describe('video rules', () => {
   it('only drafts and failed videos are editable', () => {
@@ -32,5 +32,11 @@ describe('video rules', () => {
   it('builds the text to paste', () => {
     expect(postText('Hello', ['a'])).toBe('Hello\n\n#a');
     expect(postText(null, [])).toBe('');
+  });
+  it('describes the verified file', () => {
+    expect(describeFile({ width: 1080, height: 1920, fps: 30, duration_s: 20.04, has_audio: false, size_bytes: 3145728 }))
+      .toBe('1080×1920 · 30 fps · 20.0 s · no sound · 3.0 MB');
+    expect(describeFile(null)).toBeNull();
+    expect(describeFile({ width: 'x' })).toBeNull();
   });
 });

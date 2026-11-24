@@ -7,7 +7,7 @@ import { signedUrlsIn } from '../../lib/images';
 import { useImageUrls } from '../../lib/useImageUrls';
 import { markTyped, type Animation, type Scene } from '../../lib/scenes';
 import {
-  availableActions, formatHashtags, isEditable, parseHashtags, parseSeconds, postText, sceneTotalMs, timeMatches,
+  availableActions, describeFile, formatHashtags, isEditable, parseHashtags, parseSeconds, postText, sceneTotalMs, timeMatches,
   type RenderJob, type StatusHistoryRow, type VideoAction, type VideoProject, type VideoSceneRow,
 } from '../../lib/videos';
 import { useI18n } from '../../i18n/i18n';
@@ -174,6 +174,9 @@ export function VideoEditor() {
         <section className="card">
           <h2>{t('vid.status.ready_to_post')}</h2>
           <p className="muted">{t('vid.ed.manualOnly')}</p>
+          {describeFile(job?.probe ?? null) && <p className="small">{t('vid.ed.fileFacts')}: {describeFile(job?.probe ?? null)}</p>}
+          {video.suggested_post_time && <p className="small">{t('vid.ed.suggestedTime')}: {video.suggested_post_time}</p>}
+          {!caption.trim() && <p className="muted small" role="note">{t('vid.ed.noCaption')}</p>}
           <div className="row">
             {files.video && <a className="btn btn-primary" href={files.video}>{t('vid.ed.downloadVideo')}</a>}
             {files.cover && <a className="btn" href={files.cover}>{t('vid.ed.downloadCover')}</a>}

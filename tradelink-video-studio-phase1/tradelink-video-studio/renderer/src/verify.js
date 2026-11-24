@@ -10,6 +10,7 @@ export function summarizeProbe(probe) {
   return {
     width: Number(v.width), height: Number(v.height), codec: v.codec_name, pix_fmt: v.pix_fmt, fps,
     duration_s: Math.round(dur * 1000) / 1000, has_audio: !!a, audio_codec: a ? a.codec_name : null,
+    size_bytes: Number(probe?.format?.size ?? 0) || null,
   };
 }
 
