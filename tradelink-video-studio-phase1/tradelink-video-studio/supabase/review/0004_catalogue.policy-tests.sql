@@ -99,7 +99,9 @@ do $$ declare n int; begin
   reset role;
 end $$;
 
--- A6 storage on source-images: viewers read, editors upload and delete only inside catalogue folders.
+-- A6 storage on source-images: viewers read, editors upload only inside catalogue folders.
+-- (Supabase forbids direct DELETE on storage.objects from SQL, so deletion is checked by policy presence below and
+--  through the Storage API in the app.)
 do $$ declare n int; begin
   insert into storage.objects (bucket_id, name) values ('source-images', 'products/seed.jpg');
   perform set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000c3","role":"authenticated"}', true);
@@ -107,8 +109,6 @@ do $$ declare n int; begin
   select count(*) into n from storage.objects where bucket_id = 'source-images'; if n <> 1 then raise exception 'A6a FAILED: viewer cannot read images'; end if;
   begin insert into storage.objects (bucket_id, name) values ('source-images', 'products/v.jpg'); raise exception 'A6b FAILED: viewer uploaded';
   exception when insufficient_privilege then null; end;
-  delete from storage.objects where name = 'products/seed.jpg';
-  get diagnostics n = row_count;                 if n <> 0 then raise exception 'A6c FAILED: viewer deleted an image'; end if;
   reset role;
   perform set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000c2","role":"authenticated"}', true);
   set local role authenticated;
@@ -117,13 +117,17 @@ do $$ declare n int; begin
   exception when insufficient_privilege then null; end;
   begin insert into storage.objects (bucket_id, name) values ('renders', 'products/e.mp4'); raise exception 'A6e FAILED: upload to another bucket';
   exception when insufficient_privilege then null; end;
-  delete from storage.objects where name = 'products/seed.jpg';
-  get diagnostics n = row_count;                 if n <> 1 then raise exception 'A6f FAILED: editor could not delete an image'; end if;
   reset role;
   set local role anon;
   begin perform count(*) from storage.objects; raise exception 'A6g FAILED: anon read storage';
   exception when insufficient_privilege then null; end;
   reset role;
+end $$;
+
+do $$ declare n int; begin
+  select count(*) into n from pg_policies where schemaname = 'storage' and tablename = 'objects'
+    and policyname in ('members read source images', 'editors upload catalogue images', 'editors delete catalogue images');
+  if n <> 3 then raise exception 'A7 FAILED: expected 3 catalogue storage policies, found %', n; end if;
 end $$;
 
 do $$ begin raise notice 'ALL CATALOGUE POLICY TESTS PASSED'; end $$;
