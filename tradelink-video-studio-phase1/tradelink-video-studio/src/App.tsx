@@ -6,7 +6,13 @@ import { useI18n } from './i18n/i18n';
 import { Layout } from './components/Layout';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
-import { Catalogue } from './pages/Catalogue';
+import { CatalogueLayout } from './pages/catalogue/CatalogueLayout';
+import { Overview } from './pages/catalogue/Overview';
+import { Products } from './pages/catalogue/Products';
+import { Categories } from './pages/catalogue/Categories';
+import { Suppliers } from './pages/catalogue/Suppliers';
+import { Campaigns } from './pages/catalogue/Campaigns';
+import { SyncSettings } from './pages/catalogue/SyncSettings';
 import { Settings } from './pages/Settings';
 import { AccessDenied } from './pages/AccessDenied';
 import { MfaEnroll } from './pages/MfaEnroll';
@@ -53,7 +59,14 @@ export function App() {
         </Route>
         <Route element={<RequireMember />}>
           <Route index element={<Dashboard />} />
-          <Route path="/catalogue" element={<Catalogue />} />
+          <Route path="/catalogue" element={<CatalogueLayout />}>
+            <Route index element={<Overview />} />
+            <Route path="products" element={<Products />} />
+            <Route path="categories" element={<Categories />} />
+            <Route path="suppliers" element={<Suppliers />} />
+            <Route path="campaigns" element={<Campaigns />} />
+            <Route path="sync" element={<SyncSettings />} />
+          </Route>
           <Route path="/settings" element={<Settings />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

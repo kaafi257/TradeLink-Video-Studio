@@ -7,7 +7,7 @@ add the licence text file beside it. Expected file names (see `src/styles/fonts.
 - `BricolageGrotesque-SemiBold.woff2`, `BricolageGrotesque-ExtraBold.woff2`
 - `Archivo-Variable.woff2`
 - `PublicSans-Regular.woff2`, `PublicSans-Medium.woff2`, `PublicSans-SemiBold.woff2`
-- `NotoSansEthiopic-Regular.woff2`, `NotoSansEthiopic-SemiBold.woff2` (Amharic)
+- `NotoSansEthiopic-Variable.woff2` (Amharic) is INCLUDED, with `NotoSansEthiopic-OFL.txt` (from github.com/google/fonts, ofl/notosansethiopic)
 - A `LICENSES.txt` with each family's licence (all four are published under the SIL Open Font
   License; confirm on the download page before adding).
 
