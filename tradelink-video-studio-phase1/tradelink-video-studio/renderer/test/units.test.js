@@ -49,9 +49,9 @@ test('width-based wrapping keeps short Amharic lines together and wraps long one
 });
 
 test('probe summary and the format check', () => {
-  const probe = { streams: [{ codec_type: 'video', width: 1080, height: 1920, codec_name: 'h264', pix_fmt: 'yuv420p', r_frame_rate: '30/1' }], format: { duration: '20.033000' } };
+  const probe = { streams: [{ codec_type: 'video', width: 1080, height: 1920, codec_name: 'h264', pix_fmt: 'yuv420p', r_frame_rate: '30/1' }], format: { duration: '20.033000', size: '3145728' } };
   const s = summarizeProbe(probe);
-  assert.deepEqual(s, { width: 1080, height: 1920, codec: 'h264', pix_fmt: 'yuv420p', fps: 30, duration_s: 20.033, has_audio: false, audio_codec: null });
+  assert.deepEqual(s, { width: 1080, height: 1920, codec: 'h264', pix_fmt: 'yuv420p', fps: 30, duration_s: 20.033, has_audio: false, audio_codec: null, size_bytes: 3145728 });
   assert.deepEqual(checkSummary(s, 20000), []);
   assert.ok(checkSummary({ ...s, width: 720, height: 1280 }, 20000)[0].includes('1080x1920'));
   assert.ok(checkSummary({ ...s, pix_fmt: 'yuv444p' }, 20000).length === 1);

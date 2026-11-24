@@ -11,7 +11,7 @@ export interface VideoProject {
   status: VideoStatus; status_note: string | null; published_at: string | null; created_at: string; updated_at: string;
 }
 export interface VideoSceneRow extends Omit<Scene, 'source'> { id: string; project_id: string; source: Record<string, string> }
-export interface RenderJob { id: string; project_id: string; status: string; attempt: number; error_message: string | null; output_path: string | null; cover_path: string | null; created_at: string }
+export interface RenderJob { id: string; project_id: string; status: string; attempt: number; error_message: string | null; output_path: string | null; cover_path: string | null; probe: Record<string, unknown> | null; created_at: string }
 export interface StatusHistoryRow { id: number; from_status: string | null; to_status: string; at: string; note: string | null }
 
 export type VideoAction = 'queue' | 'cancel' | 'archive' | 'backToDraft' | 'markPublished';
@@ -68,4 +68,15 @@ export function formatHashtags(tags: string[]): string {
 /** The text to copy into TikTok: the caption followed by the hashtags. */
 export function postText(caption: string | null, tags: string[]): string {
   return [caption?.trim() ?? '', formatHashtags(tags)].filter(Boolean).join('\n\n');
+}
+
+/** A short, honest description of the verified file, from the renderer's ffprobe report. Null if the report is missing. */
+export function describeFile(probe: Record<string, unknown> | null): string | null {
+  if (!probe) return null;
+  const w = Number(probe.width), h = Number(probe.height), fps = Number(probe.fps), dur = Number(probe.duration_s);
+  if (![w, h, fps, dur].every(Number.isFinite)) return null;
+  const size = Number(probe.size_bytes);
+  const parts = [`${w}×${h}`, `${Math.round(fps)} fps`, `${dur.toFixed(1)} s`, probe.has_audio ? 'with sound' : 'no sound'];
+  if (Number.isFinite(size) && size > 0) parts.push(`${(size / 1048576).toFixed(1)} MB`);
+  return parts.join(' · ');
 }
