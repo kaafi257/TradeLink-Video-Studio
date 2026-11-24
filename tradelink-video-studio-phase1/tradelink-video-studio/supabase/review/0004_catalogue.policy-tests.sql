@@ -119,7 +119,10 @@ do $$ declare n int; begin
   exception when insufficient_privilege then null; end;
   reset role;
   set local role anon;
-  begin perform count(*) from storage.objects; raise exception 'A6g FAILED: anon read storage';
+  -- Supabase lets anon query storage.objects but row security hides everything; a plain permission error is also fine.
+  begin
+    select count(*) into n from storage.objects where bucket_id = 'source-images';
+    if n <> 0 then raise exception 'A6g FAILED: anon can see % catalogue image rows', n; end if;
   exception when insufficient_privilege then null; end;
   reset role;
 end $$;
