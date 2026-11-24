@@ -65,3 +65,14 @@ export async function saveWithImage(
   if (newPath !== undefined && change.oldPath) await removeImages([change.oldPath]);
   return { ok: true };
 }
+
+/** Temporary links for files in the renderer's output buckets (renders, covers). Studio's own storage only. */
+export async function signedUrlsIn(bucket: 'renders' | 'covers', paths: string[], downloadName?: string): Promise<Record<string, string>> {
+  const out: Record<string, string> = {};
+  if (!supabase || paths.length === 0) return out;
+  for (const path of paths) {
+    const { data } = await supabase.storage.from(bucket).createSignedUrl(path, 3600, downloadName ? { download: downloadName } : undefined);
+    if (data?.signedUrl) out[path] = data.signedUrl;
+  }
+  return out;
+}

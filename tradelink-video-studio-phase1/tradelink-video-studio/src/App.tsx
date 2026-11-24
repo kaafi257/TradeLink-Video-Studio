@@ -13,6 +13,9 @@ import { Categories } from './pages/catalogue/Categories';
 import { Suppliers } from './pages/catalogue/Suppliers';
 import { Campaigns } from './pages/catalogue/Campaigns';
 import { SyncSettings } from './pages/catalogue/SyncSettings';
+import { Videos } from './pages/videos/Videos';
+import { VideoWizard } from './pages/videos/VideoWizard';
+import { VideoEditor } from './pages/videos/VideoEditor';
 import { Settings } from './pages/Settings';
 import { AccessDenied } from './pages/AccessDenied';
 import { MfaEnroll } from './pages/MfaEnroll';
@@ -67,6 +70,9 @@ export function App() {
             <Route path="campaigns" element={<Campaigns />} />
             <Route path="sync" element={<SyncSettings />} />
           </Route>
+          <Route path="/videos" element={<Videos />} />
+          <Route path="/videos/new" element={<VideoWizard />} />
+          <Route path="/videos/:id" element={<VideoEditor />} />
           <Route path="/settings" element={<Settings />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
