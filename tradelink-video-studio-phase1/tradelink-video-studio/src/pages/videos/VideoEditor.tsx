@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { runQualityChecks, type QualityCheck, type QualityReport } from '../../lib/quality';
 import { Link, useParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth';
@@ -88,6 +89,7 @@ export function VideoEditor() {
   const timeOk = secondsOk && timeMatches(total, video.duration_seconds);
   const tagList = parseHashtags(tags);
   const actions = availableActions(video.status, canWrite);
+  const picture = (job?.probe?.picture ?? null) as { dark_seconds?: number; dark_start?: number; cover_dark?: boolean } | null;
 
   function setDraft(i: number, patch: Partial<Draft>) {
     setDrafts((ds) => ds.map((d, k) => (k === i ? { ...d, ...patch } : d)));
@@ -124,9 +126,42 @@ export function VideoEditor() {
     await load();
   }
 
+  /** Runs the quality check on the SAVED draft and stores the report. Returns it, or null when it could not be saved. */
+  async function runCheck(): Promise<QualityReport | null> {
+    if (!supabase || !video) return null;
+    const prod = video.video_type === 'product_showcase' || video.video_type === 'wholesale_offer';
+    const [pr, su, ca, co] = await Promise.all([
+      prod && video.product_id ? supabase.from('products').select('*').eq('id', video.product_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
+      video.supplier_id ? supabase.from('suppliers').select('*').eq('id', video.supplier_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
+      video.campaign_id ? supabase.from('campaigns').select('*').eq('id', video.campaign_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
+      video.supplier_id ? supabase.from('supplier_consents').select('withdrawn').eq('supplier_id', video.supplier_id) : Promise.resolve({ data: [], error: null }),
+    ]);
+    if (pr.error || su.error || ca.error || co.error) return null;
+    const report = runQualityChecks({
+      project: video, scenes, product: pr.data as never, supplier: su.data as never, campaign: ca.data as never,
+      consented: ((co.data ?? []) as Array<{ withdrawn: boolean }>).some((c) => !c.withdrawn),
+    });
+    const { error } = await supabase.rpc('save_quality_report', { p_project: id, p_report: report });
+    if (error) return null;
+    await load();
+    return report;
+  }
+
+  async function checkOnly() {
+    setBusy(true);
+    const r = await runCheck();
+    setBusy(false);
+    setMsg(r ? null : { kind: 'error', text: t('vid.q.error') });
+  }
+
   async function run(action: VideoAction) {
     if (!supabase) return;
     setBusy(true);
+    if (action === 'queue' && editable) {
+      const r = await runCheck();
+      if (!r) { setBusy(false); return setMsg({ kind: 'error', text: t('vid.q.error') }); }
+      if (r.status === 'fail') { setBusy(false); return setMsg({ kind: 'error', text: t('vid.q.blocked') }); }
+    }
     let error: { message?: string } | null = null;
     if (action === 'queue') ({ error } = await supabase.rpc('queue_video', { p_project: id }));
     else if (action === 'cancel') ({ error } = await supabase.rpc('cancel_video', { p_project: id }));
@@ -177,6 +212,12 @@ export function VideoEditor() {
           {describeFile(job?.probe ?? null) && <p className="small">{t('vid.ed.fileFacts')}: {describeFile(job?.probe ?? null)}</p>}
           {video.suggested_post_time && <p className="small">{t('vid.ed.suggestedTime')}: {video.suggested_post_time}</p>}
           {!caption.trim() && <p className="muted small" role="note">{t('vid.ed.noCaption')}</p>}
+          {picture && (
+            <p className="notice" role="note" data-testid="picture-notice">{t('vid.ed.pictureNotice')}
+              {typeof picture.dark_seconds === 'number' && <> ({t('vid.ed.darkStretch')}: {picture.dark_seconds} s, {picture.dark_start} s)</>}
+              {picture.cover_dark === true && <> ({t('vid.ed.coverDark')})</>}
+            </p>
+          )}
           <div className="row">
             {files.video && <a className="btn btn-primary" href={files.video}>{t('vid.ed.downloadVideo')}</a>}
             {files.cover && <a className="btn" href={files.cover}>{t('vid.ed.downloadCover')}</a>}
@@ -188,6 +229,16 @@ export function VideoEditor() {
               <button type="button" className="btn btn-primary" disabled={busy || !confirmPublished} onClick={() => void run('markPublished')}>{t('vid.act.markPublished')}</button>
             </div>
           )}
+        </section>
+      )}
+
+      {editable && (
+        <section className="card quality" aria-labelledby="q-h">
+          <h2 id="q-h">{t('vid.q.title')}</h2>
+          <p className="muted small">{t('vid.q.intro')}</p>
+          <QualityPanel report={video.quality_report as QualityReport | null} checkedAt={video.quality_checked_at}
+            latestEdit={[video.updated_at, ...scenes.map((s) => s.updated_at)].sort().at(-1) ?? null} />
+          <div className="row"><button type="button" className="btn" disabled={busy} onClick={() => void checkOnly()}>{t('vid.q.run')}</button></div>
         </section>
       )}
 
@@ -270,5 +321,38 @@ export function VideoEditor() {
       )}
       {job && job.status === 'failed' && job.error_message && <p className="muted small">{job.error_message}</p>}
     </>
+  );
+}
+
+function QualityPanel({ report, checkedAt, latestEdit }: { report: QualityReport | null; checkedAt: string | null; latestEdit: string | null }) {
+  const { t } = useI18n();
+  if (!report) return <p className="muted" data-testid="q-none">{t('vid.q.none')}</p>;
+  const stale = !!checkedAt && !!latestEdit && new Date(latestEdit).getTime() > new Date(checkedAt).getTime() + 2000;
+  const mark = (c: QualityCheck) => (c.status === 'pass' ? t('vid.q.ok') : c.status === 'warn' ? t('vid.q.w') : t('vid.q.f'));
+  const word = (c: QualityCheck) => t(`vid.q.${c.status}` as MessageKey);
+  const problems = report.checks.filter((c) => c.status !== 'pass').sort((a, b) => (a.status === b.status ? 0 : a.status === 'fail' ? -1 : 1));
+  const passed = report.checks.filter((c) => c.status === 'pass');
+  return (
+    <div data-testid="q-report" data-status={report.status}>
+      <p><strong>{t(`vid.q.${report.status}` as MessageKey)}</strong>{checkedAt && <span className="muted small"> · {t('vid.q.last')}: {new Date(checkedAt).toLocaleString()}</span>}</p>
+      {stale && <p className="notice" role="note">{t('vid.q.stale')}</p>}
+      {problems.length > 0 && (
+        <ul className="qlist">
+          {problems.map((c) => (
+            <li key={c.id} className={`q-${c.status}`}>
+              <span aria-hidden="true">{mark(c)}</span> <span className="sr-only">{word(c)}: </span>{t(`vid.q.c.${c.id}` as MessageKey)}
+              {c.scenes && c.scenes.length > 0 && <span className="muted small"> ({t('vid.q.scenes')}: {c.scenes.join(', ')})</span>}
+              {c.detail && c.status !== 'pass' && <span className="muted small"> [{c.detail}]</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+      {passed.length > 0 && (
+        <details>
+          <summary>{passed.length} {t('vid.q.passed')}</summary>
+          <ul className="qlist">{passed.map((c) => <li key={c.id} className="q-pass"><span aria-hidden="true">{t('vid.q.ok')}</span> {t(`vid.q.c.${c.id}` as MessageKey)}</li>)}</ul>
+        </details>
+      )}
+    </div>
   );
 }

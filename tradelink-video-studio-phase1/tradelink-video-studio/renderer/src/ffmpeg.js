@@ -116,6 +116,12 @@ export function coverArgs(videoName, coverName, atSeconds) {
   return ['-y', '-v', 'error', '-ss', String(atSeconds), '-i', videoName, '-frames:v', '1', '-q:v', '3', coverName];
 }
 
+/** Looks for black stretches (a broken or missing picture). Prints black_start/black_end lines on stderr. */
+export function blackArgs(inputName, { image = false } = {}) {
+  const pre = image ? ['-loop', '1', '-t', '2'] : [];
+  return ['-hide_banner', '-nostats', ...pre, '-i', inputName, '-vf', `blackdetect=d=${image ? 1 : 1.5}:pix_th=0.10:picture_black_ratio_th=0.65`, '-an', '-f', 'null', '-'];
+}
+
 export function probeArgs(videoName) {
   return ['-v', 'error', '-print_format', 'json', '-show_streams', '-show_format', videoName];
 }
