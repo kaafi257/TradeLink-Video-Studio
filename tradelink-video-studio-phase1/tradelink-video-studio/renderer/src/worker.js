@@ -28,11 +28,12 @@ export async function processJob({ client, job, cfg, log = () => {}, fontDir = F
   const plan = job.plan;
   const scenes = plan?.scenes ?? [];
   const style = plan?.project?.style ?? 'premium';
+  const templateId = plan?.project?.template_id ?? null;
   const pid = job.project_id;
   const work = await mkdtemp(join(tmpdir(), 'studio-render-'));
   try {
     if (scenes.length < 3) throw new RenderError('The job has fewer than 3 scenes');
-    log(`Job ${job.id}: ${scenes.length} scenes, ${job.expected_ms / 1000}s, style ${style}, attempt ${job.attempt}`);
+    log(`Job ${job.id}: ${scenes.length} scenes, ${job.expected_ms / 1000}s, style ${style}${templateId ? `, template ${templateId}` : ''}, attempt ${job.attempt}`);
 
     const fontSrc = wantsEthiopic(scenes) ? 'NotoSansEthiopic-Bold.ttf' : 'DejaVuSans-Bold.ttf';
     await copyFile(join(fontDir, fontSrc), join(work, 'font.ttf'));
@@ -51,7 +52,7 @@ export async function processJob({ client, job, cfg, log = () => {}, fontDir = F
     }
 
     // 2. the video
-    const { args, textFiles } = buildRenderArgs(scenes, { style, imageFiles, fontFile: 'font.ttf' });
+    const { args, textFiles } = buildRenderArgs(scenes, { style, imageFiles, fontFile: 'font.ttf', templateId });
     for (const [name, text] of Object.entries(textFiles)) await writeFile(join(work, name), text, 'utf8');
     log('Rendering with FFmpeg…');
     await run(cfg.ffmpeg, args, { cwd: work });

@@ -15,6 +15,7 @@ import { Campaigns } from './pages/catalogue/Campaigns';
 import { SyncSettings } from './pages/catalogue/SyncSettings';
 import { Videos } from './pages/videos/Videos';
 import { VideoWizard } from './pages/videos/VideoWizard';
+import { QuickCreate } from './pages/videos/QuickCreate';
 import { VideoEditor } from './pages/videos/VideoEditor';
 import { Settings } from './pages/Settings';
 import { AccessDenied } from './pages/AccessDenied';
@@ -72,6 +73,7 @@ export function App() {
           </Route>
           <Route path="/videos" element={<Videos />} />
           <Route path="/videos/new" element={<VideoWizard />} />
+          <Route path="/videos/quick" element={<QuickCreate />} />
           <Route path="/videos/:id" element={<VideoEditor />} />
           <Route path="/settings" element={<Settings />} />
         </Route>

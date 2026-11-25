@@ -55,7 +55,7 @@ const q = (s) => `'${s}'`;
  * @param opts    { style, imageFiles: Map(image_path -> composite file name), fontFile }
  * @returns { args, textFiles: {name: content}, frames }
  */
-export function buildRenderArgs(scenes, { style, imageFiles, fontFile, outName = 'out.mp4' }) {
+export function buildRenderArgs(scenes, { style, imageFiles, fontFile, outName = 'out.mp4', templateId = null }) {
   const inputs = [];
   const chains = [];
   const textFiles = { 'wm.txt': 'TradeLink' };
@@ -66,7 +66,7 @@ export function buildRenderArgs(scenes, { style, imageFiles, fontFile, outName =
     const n = Math.round(secs * FPS);
     frames += n;
     const imgFile = scene.image_path ? imageFiles.get(scene.image_path) : null;
-    const lay = layoutScene(scene, style, !!imgFile);
+    const lay = layoutScene(scene, style, !!imgFile, templateId);
 
     if (imgFile) {
       inputs.push('-loop', '1', '-framerate', String(FPS), '-t', secs.toFixed(3), '-i', imgFile);
@@ -96,8 +96,8 @@ export function buildRenderArgs(scenes, { style, imageFiles, fontFile, outName =
     });
 
     if (lay.fades) {
-      f.push(`fade=t=in:st=0:d=0.3`);
-      f.push(`fade=t=out:st=${Math.max(0, secs - 0.3).toFixed(3)}:d=0.3`);
+      f.push(`fade=t=in:st=0:d=${lay.fadeS}`);
+      f.push(`fade=t=out:st=${Math.max(0, secs - lay.fadeS).toFixed(3)}:d=${lay.fadeS}`);
     }
     chains.push(`[${i}:v]${f.join(',')}[s${i}]`);
   });
