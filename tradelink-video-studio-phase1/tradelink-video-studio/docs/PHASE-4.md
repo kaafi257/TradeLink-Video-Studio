@@ -20,3 +20,8 @@ DRAFT, six templates, one-click stops at Draft, no new npm dependencies, nothing
 - The facts sent to a model are built inside the database from approved catalogue rows only.
 - Claims guard blocks numbers/prices not in the data, percentages, links, handles and marketing claims. The Somali and Amharic word lists are unverified drafts.
 - The quality gate is a guardrail against mistakes, not against a malicious editor (editors can already queue valid videos).
+
+## Stage 2: copy engine and claims guard (app side)
+- `src/lib/claimsGuard.ts`: the same rules as `claims_problem()` in 0006 (no invented numbers, percentages, links, handles or marketing claims). Checked against the database guard on 40 sample phrases: 40/40 agree.
+- `src/lib/copy.ts`: `buildFacts` (approved fields only), rule-based caption and hashtags for English, Somali and Amharic (DRAFT), scene shortening, and `runCopy()`, which applies the guard and limits to EVERY provider and lists what it dropped. `applySuggestion` records where applied text came from (`rules` / `local_ai`).
+- Not wired into screens yet: the one-click page (Stage 3) and "Improve copy" buttons (Stage 5) will use it. No new dependencies.
