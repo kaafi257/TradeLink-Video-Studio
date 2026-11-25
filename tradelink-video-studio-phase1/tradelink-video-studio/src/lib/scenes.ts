@@ -74,8 +74,14 @@ function priceText(p: Product, lang: Lang): { headline: string; body: string | n
   return { headline: formatPrice(p.retail_price, lang), body: null, source: { headline: 'product.retail_price' } };
 }
 
-function ctaText(c: Cta, lang: Lang): string {
+/** The call-to-action line, e.g. "WhatsApp: +000". Shared with the copy engine so captions and scenes agree. */
+export function ctaText(c: Cta, lang: Lang): string {
   return `${LABELS[lang].cta[c.type]}: ${c.value.trim()}`;
+}
+
+/** Fixed interface labels for a language (not business data). */
+export function labelsFor(lang: Lang) {
+  return LABELS[lang];
 }
 
 interface Draft { type: SceneType; weight: number; headline?: string | null; body?: string | null; image?: string | null; source?: Record<string, string>; kind: 'image' | 'text' }
