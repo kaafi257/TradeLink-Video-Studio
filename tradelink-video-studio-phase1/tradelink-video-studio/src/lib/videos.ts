@@ -6,8 +6,9 @@ export type VideoStatus = (typeof VIDEO_STATUSES)[number];
 
 export interface VideoProject {
   id: string; title: string; video_type: string; product_id: string | null; supplier_id: string | null; campaign_id: string | null;
-  language: 'en' | 'am'; duration_seconds: 15 | 20 | 30; style: string; cta_type: string; cta_value: string;
+  language: 'en' | 'am' | 'so'; duration_seconds: 15 | 20 | 30; style: string; cta_type: string; cta_value: string;
   caption: string | null; hashtags: string[]; suggested_post_time: string | null;
+  template_id: string | null; copy_source: 'manual' | 'rules' | 'local_ai'; quality_report: { status: 'pass' | 'warn' | 'fail'; checks: unknown[] } | null; quality_checked_at: string | null;
   status: VideoStatus; status_note: string | null; published_at: string | null; created_at: string; updated_at: string;
 }
 export interface VideoSceneRow extends Omit<Scene, 'source'> { id: string; project_id: string; source: Record<string, string> }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Campaign, Product, Supplier } from './catalogue';
 import { generateScenes, markTyped, splitDuration, type SceneInput } from './scenes';
+import { TEMPLATE_IDS, TEMPLATES } from './templates';
 
 const base: Product = {
   id: 'p1', name: 'Test Shirt', description: null, category_id: null, supplier_id: null, brand: null, unit: null,
@@ -77,6 +78,53 @@ describe('campaign promotion', () => {
   it('uses only eligible products', () => {
     const s = scenesOf(mk({ type: 'campaign_promotion', campaign: camp, product: null, campaignProducts: [base, { ...base, id: 'p2', name: 'Hidden', image_approved: false }] }));
     expect(s.filter((x) => x.scene_type === 'product').map((x) => x.headline)).toEqual(['Test Shirt']);
+  });
+});
+
+describe('Somali and templates', () => {
+  const sup: Supplier = { id: 's1', name: 'Sup A', logo_path: 'suppliers/l.png', industry: 'Textiles', location: 'Addis Ababa', description: null, active: true, created_at: '', updated_at: '' };
+  const camp: Campaign = { id: 'c1', name: 'Eid', campaign_type: 'seasonal', description: null, banner_path: null, starts_on: null, ends_on: null, active: true, created_at: '', updated_at: '' };
+  const p = { ...base, stock_status: 'in_stock' as const, min_order_quantity: 12, unit: 'box' };
+  it('flags Somali as DRAFT, keeps ETB and uses Somali labels', () => {
+    const r = generateScenes(mk({ language: 'so', product: p, cta: { type: 'phone', value: '+000' } }));
+    expect(r.ok && r.draftLanguage).toBe(true);
+    expect(r.ok && r.scenes.find((x) => x.scene_type === 'price')!.headline).toContain('ETB');
+    expect(r.ok && r.scenes.find((x) => x.scene_type === 'cta')!.headline).toContain('Soo wac');
+    const w = generateScenes(mk({ language: 'so', type: 'wholesale_offer', product: p }));
+    expect(w.ok && w.scenes.find((x) => x.scene_type === 'wholesale')!.body).toBe('Codso qiimo');
+  });
+  it('English is not flagged as DRAFT', () => {
+    const r = generateScenes(mk({ product: p }));
+    expect(r.ok && r.draftLanguage).toBe(false);
+  });
+  it('a template changes pacing and motion but never the text', () => {
+    const plain = scenesOf(mk({ product: p }));
+    const bold = scenesOf(mk({ product: p, templateId: 'bold_sale', style: 'dynamic' }));
+    expect(bold.map((x) => x.headline)).toEqual(plain.map((x) => x.headline));
+    expect(bold.map((x) => x.body)).toEqual(plain.map((x) => x.body));
+    expect(bold.reduce((a, x) => a + x.duration_ms, 0)).toBe(20000);
+    const price = bold.find((x) => x.scene_type === 'price')!;
+    expect(price.duration_ms).toBeGreaterThan(plain.find((x) => x.scene_type === 'price')!.duration_ms);
+    expect(bold.at(-1)!.animation).toBe('slide_up');
+  });
+  it('refuses a template that does not fit the video type or length', () => {
+    expect(generateScenes(mk({ product: p, templateId: 'wholesale_offer' }))).toEqual({ ok: false, problem: 'templateMismatch' });
+    expect(generateScenes(mk({ product: p, templateId: 'story_quick', duration: 30 }))).toEqual({ ok: false, problem: 'templateMismatch' });
+  });
+  it('every template keeps scene times adding up exactly', () => {
+    for (const id of TEMPLATE_IDS) {
+      const t = TEMPLATES[id];
+      for (const type of t.videoTypes) for (const d of t.durations) {
+        const r = generateScenes(mk({ type, duration: d, templateId: id, product: p, supplier: sup, supplierConsent: true, campaign: camp, campaignProducts: [p] }));
+        expect(r.ok, `${id}/${type}/${d}`).toBe(true);
+        if (r.ok) expect(r.scenes.reduce((a, x) => a + x.duration_ms, 0)).toBe(d * 1000);
+      }
+    }
+  });
+  it('without a template the manual workflow is unchanged', () => {
+    const a = scenesOf(mk({ product: p }));
+    const b = scenesOf(mk({ product: p, templateId: null }));
+    expect(b).toEqual(a);
   });
 });
 

@@ -155,7 +155,7 @@ export function VideoWizard() {
           <div className="two">
             <label className="field"><span>{t('vid.wiz.language')}</span>
               <select value={language} onChange={(e) => setLanguage(e.target.value as Lang)}>
-                <option value="en">{t('lang.en')}</option><option value="am">{t('lang.am')}</option>
+                <option value="en">{t('lang.en')}</option><option value="am">{t('lang.am')}</option><option value="so">{t('lang.so')}</option>
               </select>
             </label>
             <label className="field"><span>{t('vid.wiz.length')}</span>

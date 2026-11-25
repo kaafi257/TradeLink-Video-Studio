@@ -1,0 +1,22 @@
+# Phase 4: AI Video Automation (running notes)
+
+Plan: `docs/PHASE-4-PLAN.md`. Approved decisions: local Ollama (optional) + rules, no hosted AI or paid API, Somali and Amharic stay
+DRAFT, six templates, one-click stops at Draft, no new npm dependencies, nothing publishes automatically.
+
+## Stage 1: foundations (this stage)
+- `supabase/migrations/0006_ai_automation.sql` (FOR YOUR REVIEW, not applied): Somali video language, `template_id`, `copy_source`,
+  quality report (written only by `save_quality_report()`), `queue_video()` refuses a saved "fail" report, `copy_jobs` queue and
+  functions for the optional local AI, claims guard in the database (`claims_problem()`).
+- `supabase/review/0006_ai_automation.policy-tests.sql` and `0006_ai_automation.rollback.sql`.
+- `src/lib/templates.ts` (six templates), Somali labels in `src/lib/scenes.ts`, Somali choice in the wizard, DRAFT notice for Somali.
+
+### How to apply (when you approve)
+1. Supabase SQL Editor: run the whole file `0006_ai_automation.sql` once. It will fail with "already exists" if run twice; that is safe, do not re-run.
+2. Run `0006_ai_automation.policy-tests.sql`. Success = one row "ALL AI AUTOMATION POLICY TESTS PASSED". It saves nothing.
+3. Optional: run the 0005 policy tests again to confirm nothing changed.
+
+### Safety notes
+- The AI never writes into a video. Suggestions are stored in `copy_jobs.result`; a person reviews and applies them (Stage 5).
+- The facts sent to a model are built inside the database from approved catalogue rows only.
+- Claims guard blocks numbers/prices not in the data, percentages, links, handles and marketing claims. The Somali and Amharic word lists are unverified drafts.
+- The quality gate is a guardrail against mistakes, not against a malicious editor (editors can already queue valid videos).
