@@ -1,6 +1,7 @@
 // Scene-plan generator (pure; no network). Builds editable scenes ONLY from approved catalogue data.
 // It never invents prices, descriptions, stock or claims: a field that is empty produces no scene text.
 import { formatPrice, videoEligible, type Campaign, type Product, type Supplier } from './catalogue';
+import { TEMPLATES, templateFits, type TemplateId } from './templates';
 
 export const VIDEO_TYPES = ['product_showcase', 'wholesale_offer', 'supplier_spotlight', 'campaign_promotion'] as const;
 export type VideoType = (typeof VIDEO_TYPES)[number];
@@ -10,7 +11,7 @@ export const STYLES = ['premium', 'dynamic', 'minimal'] as const;
 export type Style = (typeof STYLES)[number];
 export const CTA_TYPES = ['whatsapp', 'telegram', 'phone', 'website'] as const;
 export type CtaType = (typeof CTA_TYPES)[number];
-export type Lang = 'en' | 'am';
+export type Lang = 'en' | 'am' | 'so';
 
 export type SceneType = 'intro' | 'product' | 'price' | 'wholesale' | 'supplier' | 'campaign' | 'cta' | 'outro';
 export type Animation = 'none' | 'fade' | 'zoom_in' | 'zoom_out' | 'pan_left' | 'pan_right' | 'slide_up' | 'slide_left' | 'reveal';
@@ -34,18 +35,21 @@ export interface SceneInput {
   /** Supplier Spotlight only: true when a not-withdrawn supplier consent exists. */
   supplierConsent?: boolean;
   campaignProducts?: Product[];
+  /** Optional template: sets pacing and animations. Without one, the style alone decides (the manual workflow). */
+  templateId?: TemplateId | null;
 }
 
 export type PlanProblem =
-  | 'noSubject' | 'productNotEligible' | 'needsMoq' | 'needsConsent' | 'supplierInactive' | 'campaignInactive' | 'noCta';
+  | 'noSubject' | 'productNotEligible' | 'needsMoq' | 'needsConsent' | 'supplierInactive' | 'campaignInactive' | 'noCta' | 'templateMismatch';
 export type PlanResult =
   | { ok: true; scenes: Scene[]; draftLanguage: boolean }
   | { ok: false; problem: PlanProblem };
 
-// Fixed interface labels (not business data). Amharic labels are DRAFT until a native speaker approves them.
+// Fixed interface labels (not business data). Amharic and Somali labels are DRAFT until a native speaker approves them.
 const LABELS = {
   en: { moq: 'Minimum order', quote: 'Request a Quote', inStock: 'In stock', cta: { whatsapp: 'WhatsApp', telegram: 'Telegram', phone: 'Call', website: 'Visit' } },
   am: { moq: 'ዝቅተኛ ትዕዛዝ', quote: 'ዋጋ ይጠይቁ', inStock: 'ክምችት አለ', cta: { whatsapp: 'ዋትስአፕ', telegram: 'ቴሌግራም', phone: 'ይደውሉ', website: 'ድረ ገጽ' } },
+  so: { moq: 'Tirada ugu yar ee dalabka', quote: 'Codso qiimo', inStock: 'Waa la heli karaa', cta: { whatsapp: 'WhatsApp', telegram: 'Telegram', phone: 'Soo wac', website: 'Booqo' } },
 } as const;
 
 const ANIM: Record<Style, { image: Animation[]; text: Animation }> = {
@@ -77,8 +81,9 @@ function ctaText(c: Cta, lang: Lang): string {
 interface Draft { type: SceneType; weight: number; headline?: string | null; body?: string | null; image?: string | null; source?: Record<string, string>; kind: 'image' | 'text' }
 
 function finish(drafts: Draft[], input: SceneInput): PlanResult {
-  const ms = splitDuration(input.duration * 1000, drafts.map((d) => d.weight));
-  const a = ANIM[input.style];
+  const tpl = input.templateId ? TEMPLATES[input.templateId] : null;
+  const ms = splitDuration(input.duration * 1000, drafts.map((d) => tpl?.weights[d.type] ?? d.weight));
+  const a = tpl ? tpl.animations : ANIM[input.style];
   let img = 0;
   const scenes = drafts.map<Scene>((d, i) => ({
     position: i + 1,
@@ -90,12 +95,13 @@ function finish(drafts: Draft[], input: SceneInput): PlanResult {
     animation: d.kind === 'image' ? a.image[img++ % a.image.length]! : a.text,
     source: d.source ?? {},
   }));
-  return { ok: true, scenes, draftLanguage: input.language === 'am' };
+  return { ok: true, scenes, draftLanguage: input.language !== 'en' };
 }
 
 export function generateScenes(input: SceneInput): PlanResult {
   const { type, language: lang } = input;
   if (input.cta.value.trim() === '') return { ok: false, problem: 'noCta' };
+  if (input.templateId && !templateFits(input.templateId, type, input.duration)) return { ok: false, problem: 'templateMismatch' };
   const cta: Draft = { type: 'cta', weight: 3, headline: ctaText(input.cta, lang), source: { headline: 'cta' }, kind: 'text' };
 
   if (type === 'product_showcase' || type === 'wholesale_offer') {

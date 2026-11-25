@@ -154,7 +154,7 @@ export function VideoEditor() {
       <p className="muted small">
         {t(`vid.type.${video.video_type}` as MessageKey)} · {video.duration_seconds} s · {t(`vid.style.${video.style}` as MessageKey)} · {video.language.toUpperCase()} · {formatDate(video.created_at)}
       </p>
-      {video.language === 'am' && <p className="draft-notice" role="note"><strong>DRAFT</strong> · {t('vid.ed.amDraft')}</p>}
+      {video.language !== 'en' && <p className="draft-notice" role="note"><strong>DRAFT</strong> · {t(video.language === 'so' ? 'vid.ed.soDraft' : 'vid.ed.amDraft')}</p>}
       {video.status_note && <p className={video.status === 'failed' ? 'error' : 'muted'} role={video.status === 'failed' ? 'alert' : undefined}>{video.status_note}</p>}
       {!canWrite && <p className="muted">{t('vid.ed.readOnly')}</p>}
       {canWrite && !editable && video.status !== 'archived' && <p className="muted">{t('vid.ed.frozen')}</p>}

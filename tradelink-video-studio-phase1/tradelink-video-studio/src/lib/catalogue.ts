@@ -135,7 +135,7 @@ export function sortProducts(list: Product[], key: SortKey): Product[] {
 }
 
 /** English: "ETB 1,234.50". Amharic: "ብር 1,234.50". */
-export function formatPrice(n: number, lang: 'en' | 'am'): string {
+export function formatPrice(n: number, lang: 'en' | 'am' | 'so'): string {
   const s = n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   return lang === 'am' ? `ብር ${s}` : `ETB ${s}`;
 }
