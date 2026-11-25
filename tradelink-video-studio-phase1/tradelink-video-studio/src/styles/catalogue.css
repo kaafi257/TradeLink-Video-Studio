@@ -93,3 +93,13 @@ a.btn { text-decoration: none; display: inline-block; }
 .error { color: var(--danger); }
 .check { display: flex; gap: 0.5rem; align-items: center; }
 .history { margin: 0; padding-left: 1.1rem; display: grid; gap: 0.25rem; }
+
+/* Quality check panel (Phase 4) */
+.qlist { list-style: none; margin: 0.5rem 0; padding: 0; display: grid; gap: 0.35rem; }
+.qlist li { padding: 0.45rem 0.7rem; border-radius: 8px; border-left: 4px solid var(--line, #e5e9e7); background: #fff; }
+.qlist .q-fail { border-left-color: #b3261e; background: #fdf1f0; }
+.qlist .q-warn { border-left-color: var(--gold, #e9a914); background: #fff8e6; }
+.qlist .q-pass { border-left-color: #2e7d32; }
+.quality details { margin: 0.5rem 0; }
+.notice { background: #fff8e6; border: 1px solid var(--gold, #e9a914); border-radius: 8px; padding: 0.5rem 0.75rem; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

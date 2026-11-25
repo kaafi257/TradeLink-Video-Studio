@@ -14,6 +14,31 @@ export function summarizeProbe(probe) {
   };
 }
 
+/** Reads ffmpeg blackdetect output: [{start, end, duration}] in seconds. */
+export function parseBlackDetect(stderr) {
+  const out = [];
+  for (const m of String(stderr ?? '').matchAll(/black_start:([0-9.]+)\s+black_end:([0-9.]+)\s+black_duration:([0-9.]+)/g)) {
+    out.push({ start: Number(m[1]), end: Number(m[2]), duration: Number(m[3]) });
+  }
+  return out;
+}
+
+/**
+ * After-render picture notes. These are WARNINGS for the person who reviews the video, not failures: a legitimately dark
+ * product photo must not block a good video. Returns null when nothing stands out.
+ */
+export function pictureNotes({ videoBlack = [], coverBlack = [] }) {
+  if (!videoBlack.length && !coverBlack.length) return null;
+  const notes = {};
+  if (videoBlack.length) {
+    const w = videoBlack.reduce((a, b) => (b.duration > a.duration ? b : a));
+    notes.dark_seconds = Math.round(w.duration * 10) / 10;
+    notes.dark_start = Math.round(w.start * 10) / 10;
+  }
+  if (coverBlack.length) notes.cover_dark = true;
+  return notes;
+}
+
 /** Returns a list of problems (empty = OK). */
 export function checkSummary(s, expectedMs) {
   if (!s) return ['no video stream found'];

@@ -11,7 +11,7 @@ export interface VideoProject {
   template_id: string | null; copy_source: 'manual' | 'rules' | 'local_ai'; quality_report: { status: 'pass' | 'warn' | 'fail'; checks: unknown[] } | null; quality_checked_at: string | null;
   status: VideoStatus; status_note: string | null; published_at: string | null; created_at: string; updated_at: string;
 }
-export interface VideoSceneRow extends Omit<Scene, 'source'> { id: string; project_id: string; source: Record<string, string> }
+export interface VideoSceneRow extends Omit<Scene, 'source'> { id: string; project_id: string; source: Record<string, string>; updated_at: string }
 export interface RenderJob { id: string; project_id: string; status: string; attempt: number; error_message: string | null; output_path: string | null; cover_path: string | null; probe: Record<string, unknown> | null; created_at: string }
 export interface StatusHistoryRow { id: number; from_status: string | null; to_status: string; at: string; note: string | null }
 

@@ -5,9 +5,9 @@ import { tmpdir } from 'node:os';
 import { dirname, join, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Buffer } from 'node:buffer';
-import { RenderError, buildRenderArgs, compositeArgs, coverArgs, probeArgs, run } from './ffmpeg.js';
+import { RenderError, blackArgs, buildRenderArgs, compositeArgs, coverArgs, probeArgs, run } from './ffmpeg.js';
 import { wantsEthiopic } from './layout.js';
-import { checkSummary, summarizeProbe } from './verify.js';
+import { checkSummary, parseBlackDetect, pictureNotes, summarizeProbe } from './verify.js';
 
 const FONT_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'fonts');
 
@@ -65,6 +65,12 @@ export async function processJob({ client, job, cfg, log = () => {}, fontDir = F
 
     // 4. cover picture from the opening scene
     await run(cfg.ffmpeg, coverArgs('out.mp4', 'cover.jpg', Math.min(1, scenes[0].duration_ms / 2000)), { cwd: work });
+
+    // 4b. picture notice (a warning only): a very dark stretch or cover, for the reviewer to look at
+    const vb = parseBlackDetect((await run(cfg.ffmpeg, blackArgs('out.mp4'), { cwd: work })).err);
+    const cb = parseBlackDetect((await run(cfg.ffmpeg, blackArgs('cover.jpg', { image: true }), { cwd: work })).err);
+    const notes = pictureNotes({ videoBlack: vb, coverBlack: cb });
+    if (notes) { summary.picture = notes; log(`Picture notice: ${JSON.stringify(notes)}`); }
 
     // 5. upload (a new file name per attempt: the renderer may add files but never overwrite)
     const base = `${pid}/${job.id}-${job.attempt}`;
