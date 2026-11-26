@@ -85,3 +85,6 @@ To start it automatically: Windows Task Scheduler → Create Basic Task → "Whe
 - **Amharic wording is DRAFT** until a native speaker approves it. Check every Amharic video before posting.
 - The renderer was tested here with real FFmpeg 6.1 and a simulated Supabase. It has not yet run against your live project:
   run `npm run check`, then `npm run once` with one queued video as the first real test.
+
+## Optional: local AI wording
+Off by default. See "Turning the local AI on" in `docs/PHASE-4.md`. It only talks to Ollama on this same computer, and every suggestion is checked by the database before anyone can apply it.

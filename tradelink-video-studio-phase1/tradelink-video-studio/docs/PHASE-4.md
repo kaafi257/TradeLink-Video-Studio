@@ -36,3 +36,14 @@ DRAFT, six templates, one-click stops at Draft, no new npm dependencies, nothing
 - Editor: a "Quality check" panel (run button, grouped results, stale notice). Pressing Queue runs the check first, saves it with `save_quality_report()` and stops on a fail. The database (0006) refuses a saved fail as well. No new database change in this stage; it uses 0006, which you must apply first.
 - Renderer: after rendering it looks for very dark stretches and a dark cover and records them as a WARNING in the job report (not a failure, so a legitimately dark photo never blocks a video). The Ready-to-post panel shows the notice and the verified file facts.
 - Honest limits: the quality gate guards against mistakes, not against a malicious editor; the renderer's dark-frame check is a heuristic.
+
+## Stage 5: optional local AI and "Suggested wording"
+- Migration `0007_copy_scene_context.sql` (FOR YOUR REVIEW, not applied; apply AFTER 0006): `request_copy_job` now also puts the saved scene wording in the facts (all scenes, or the one scene asked for). Re-runnable. Policy tests and rollback are in `supabase/review/`.
+- Renderer (`renderer/src/copyjob.js`, `config.js`, `main.js`): OFF unless `OLLAMA_MODEL` is set in `.env`. When on, it claims a wording request only when there is no video to render, asks Ollama on THIS computer (URL must be 127.0.0.1 or localhost, otherwise the program refuses to start), and sends the answer to the database, which checks it again with the claims guard (`copy_complete_job`). Ollama not running, model missing, bad JSON, or a refused answer all end as a plain failed request. `--check` reports the local AI status. Uses Node's built-in fetch: no new dependencies. Nine new tests with a fake Ollama.
+- App (`src/lib/localAi.ts`, `src/pages/videos/SuggestPanel.tsx`, editor): a "Suggested wording" panel for editable drafts. Choose scenes+caption+hashtags, caption only, or one scene. "Suggest with rules" is instant. "Improve with local AI" queues a request, waits (with a slow hint and Cancel), then shows the answer, checked a second time in the app. Nothing is applied until "Apply to the form", and nothing is saved until Save. Saved text is tagged `rules` or `local_ai` (scene chips and `copy_source`); editing it afterwards makes it "Typed by you".
+- Viewers do not see the panel. Manual editing and the quick/wizard flows are unchanged.
+
+### Turning the local AI on (optional, your decision; nothing is installed for you)
+1. Install Ollama from ollama.com on the renderer PC and pull a small model yourself (for example `ollama pull llama3.2:3b`).
+2. In `renderer/.env` set `OLLAMA_MODEL=llama3.2:3b` (leave `OLLAMA_URL` as is). Run `npm run check`: it should say "Local AI: ready".
+3. Keep the renderer running. Without this, the "Improve with local AI" button just times out harmlessly and rules still work.

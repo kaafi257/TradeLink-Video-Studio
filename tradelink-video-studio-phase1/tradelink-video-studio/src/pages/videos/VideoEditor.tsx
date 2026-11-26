@@ -14,6 +14,8 @@ import {
 import { useI18n } from '../../i18n/i18n';
 import type { MessageKey } from '../../i18n/en';
 import { StatusChip } from './Videos';
+import { SuggestPanel, type Suggestion } from './SuggestPanel';
+import { applySuggestion, type CopySource } from '../../lib/copy';
 
 const ANIMATIONS: Animation[] = ['none', 'fade', 'zoom_in', 'zoom_out', 'pan_left', 'pan_right', 'slide_up', 'slide_left', 'reveal'];
 interface Draft { id: string; headline: string; body: string; seconds: string; animation: Animation }
@@ -40,6 +42,9 @@ export function VideoEditor() {
   const [tags, setTags] = useState('');
   const [postTime, setPostTime] = useState('');
   const [confirmPublished, setConfirmPublished] = useState(false);
+  // Words a person applied from a suggestion and not yet saved: scene id -> text and where it came from.
+  const [applied, setApplied] = useState<Record<string, { headline?: [string, CopySource]; body?: [string, CopySource] }>>({});
+  const [appliedCaption, setAppliedCaption] = useState<CopySource | null>(null);
 
   const load = useCallback(async () => {
     if (!supabase) return;
@@ -103,14 +108,20 @@ export function VideoEditor() {
     for (const [i, d] of drafts.entries()) {
       const orig = scenes[i]!;
       let sc: Scene = { ...orig, source: orig.source };
-      if ((d.headline || null) !== orig.headline) sc = markTyped(sc, 'headline', d.headline.trim() || null);
-      if ((d.body || null) !== orig.body) sc = markTyped(sc, 'body', d.body.trim() || null);
+      const ap = applied[d.id];
+      if ((d.headline || null) !== orig.headline) {
+        sc = ap?.headline && ap.headline[0] === d.headline ? applySuggestion(sc, { position: sc.position, headline: d.headline }, ap.headline[1]) : markTyped(sc, 'headline', d.headline.trim() || null);
+      }
+      if ((d.body || null) !== orig.body) {
+        sc = ap?.body && ap.body[0] === d.body ? applySuggestion(sc, { position: sc.position, body: d.body }, ap.body[1]) : markTyped(sc, 'body', d.body.trim() || null);
+      }
       const { error } = await supabase.from('video_scenes').update({
         headline: sc.headline, body: sc.body, source: sc.source, duration_ms: parsed[i], animation: d.animation,
       }).eq('id', d.id);
       if (error) { failed = true; break; }
     }
     setBusy(false);
+    if (!failed) setApplied({});
     setMsg(failed ? { kind: 'error', text: t('common.saveError') } : { kind: 'ok', text: t('vid.ed.saved') });
     await load();
   }
@@ -120,8 +131,10 @@ export function VideoEditor() {
     setBusy(true);
     const { error } = await supabase.from('video_projects').update({
       caption: caption.trim() || null, hashtags: tagList, suggested_post_time: postTime.trim() || null,
+      ...(appliedCaption ? { copy_source: appliedCaption } : {}),
     }).eq('id', id);
     setBusy(false);
+    if (!error) setAppliedCaption(null);
     setMsg(error ? { kind: 'error', text: t('common.saveError') } : { kind: 'ok', text: t('vid.ed.saved') });
     await load();
   }
@@ -145,6 +158,30 @@ export function VideoEditor() {
     if (error) return null;
     await load();
     return report;
+  }
+
+  function applyWording(sg: Suggestion, scope: 'all' | 'caption' | 'scene') {
+    if (scope !== 'caption') {
+      const bySource = new Map(sg.result.scenes.map((x) => [x.position, x]));
+      setDrafts((ds) => ds.map((d, i) => {
+        const x = bySource.get(scenes[i]!.position);
+        return x ? { ...d, ...(x.headline !== undefined ? { headline: x.headline } : {}), ...(x.body !== undefined ? { body: x.body } : {}) } : d;
+      }));
+      setApplied((a) => {
+        const next = { ...a };
+        scenes.forEach((s) => {
+          const x = bySource.get(s.position);
+          if (!x) return;
+          next[s.id] = { ...next[s.id], ...(x.headline !== undefined ? { headline: [x.headline, sg.source] as [string, CopySource] } : {}), ...(x.body !== undefined ? { body: [x.body, sg.source] as [string, CopySource] } : {}) };
+        });
+        return next;
+      });
+    }
+    if (scope !== 'scene') {
+      if (sg.result.caption) { setCaption(sg.result.caption); setAppliedCaption(sg.source); }
+      if (sg.result.hashtags?.length) { setTags(formatHashtags(sg.result.hashtags)); setAppliedCaption(sg.source); }
+    }
+    setMsg({ kind: 'ok', text: t('vid.sug.applyNote') });
   }
 
   async function checkOnly() {
@@ -242,6 +279,8 @@ export function VideoEditor() {
         </section>
       )}
 
+      {editable && <SuggestPanel video={video} scenes={scenes} disabled={busy} onApply={(sg, scope) => applyWording(sg, scope)} />}
+
       <section className="card">
         <h2>{t('vid.ed.scenes')}</h2>
         <ol className="scenes">
@@ -254,9 +293,11 @@ export function VideoEditor() {
                   {img ? <img className="scene-img" src={img} alt="" /> : <span className="scene-img none" aria-hidden="true" />}
                   <div className="chips">
                     <span className="chip">{i + 1}. {s.scene_type}</span>
-                    <span className={`chip ${s.source.headline === 'typed' || s.source.body === 'typed' ? 'chip-warn' : 'chip-ok'}`}>
-                      {s.source.headline === 'typed' || s.source.body === 'typed' ? t('vid.ed.typed') : t('vid.ed.fromCatalogue')}
-                    </span>
+                    {(() => {
+                      const srcs = [s.source.headline, s.source.body];
+                      const label = srcs.includes('typed') ? t('vid.ed.typed') : srcs.includes('local_ai') ? t('vid.ed.fromAi') : srcs.includes('rules') ? t('vid.ed.fromRules') : t('vid.ed.fromCatalogue');
+                      return <span className={`chip ${srcs.includes('typed') ? 'chip-warn' : 'chip-ok'}`}>{label}</span>;
+                    })()}
                   </div>
                 </div>
                 <label className="field"><span>{t('vid.ed.headline')}</span>

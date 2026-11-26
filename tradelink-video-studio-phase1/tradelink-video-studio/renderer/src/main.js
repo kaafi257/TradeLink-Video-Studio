@@ -7,6 +7,7 @@ import { createClient } from '@supabase/supabase-js';
 import { loadConfig } from './config.js';
 import { run } from './ffmpeg.js';
 import { processJob } from './worker.js';
+import { checkOllama, processCopyJob } from './copyjob.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const args = new Set(process.argv.slice(2));
@@ -36,11 +37,13 @@ async function main() {
   const { error } = await client.auth.signInWithPassword({ email: cfg.email, password: cfg.password });
   if (error) throw new Error(`Renderer sign-in failed: ${error.message}`);
   log('Signed in as the renderer account.');
+  log(cfg.ai ? await checkOllama(cfg.ai) : 'Local AI: off (optional). Set OLLAMA_MODEL in .env to turn it on.');
   if (args.has('--check')) { log('Check passed. FFmpeg, fonts and sign-in all work.'); return; }
 
   let stop = false;
   process.on('SIGINT', () => { stop = true; log('Stopping after the current job…'); });
   let failures = 0;
+  let aiOn = !!cfg.ai;
   while (!stop) {
     const { data, error: e } = await client.rpc('renderer_claim_job');
     if (e) {
@@ -52,7 +55,20 @@ async function main() {
     }
     failures = 0;
     const job = Array.isArray(data) ? data[0] : data;
-    if (!job) { if (args.has('--once')) { log('No queued videos.'); return; } await sleep(cfg.pollSeconds); continue; }
+    if (!job) {
+      if (aiOn) {
+        const c = await client.rpc('copy_claim_job');
+        if (c.error) {
+          log(/copy_claim_job|schema cache/i.test(c.error.message) ? 'AI wording needs database migration 0006. Turning the local AI off for this run.' : `Could not check for AI requests: ${c.error.message}`);
+          aiOn = false;
+        } else {
+          const cj = Array.isArray(c.data) ? c.data[0] : c.data;
+          if (cj) { await processCopyJob({ client, job: cj, cfg, log }); if (args.has('--once')) return; continue; }
+        }
+      }
+      if (args.has('--once')) { log('No queued videos.'); return; }
+      await sleep(cfg.pollSeconds); continue;
+    }
     await processJob({ client, job, cfg, log });
     if (args.has('--once')) return;
   }
