@@ -41,6 +41,15 @@ export function validateConfig(env) {
   if (!password) errors.push('RENDERER_PASSWORD is missing');
   const poll = Number(env.POLL_SECONDS ?? 15);
   if (!Number.isFinite(poll) || poll < 5 || poll > 3600) errors.push('POLL_SECONDS must be between 5 and 3600');
+  // Optional local AI (Ollama). Off unless OLLAMA_MODEL is set. It may only talk to THIS computer.
+  const model = (env.OLLAMA_MODEL ?? '').trim();
+  const aiUrl = (env.OLLAMA_URL ?? 'http://127.0.0.1:11434').trim().replace(/\/$/, '');
+  const aiTimeout = Number(env.OLLAMA_TIMEOUT_SECONDS ?? 120);
+  if (model) {
+    if (!/^[A-Za-z0-9._:/-]{1,80}$/.test(model)) errors.push('OLLAMA_MODEL has unexpected characters');
+    if (!/^http:\/\/(127\.0\.0\.1|localhost):[0-9]{2,5}$/.test(aiUrl)) errors.push('OLLAMA_URL must be http://127.0.0.1:<port> or http://localhost:<port>. The local AI must stay on this computer');
+    if (!Number.isFinite(aiTimeout) || aiTimeout < 10 || aiTimeout > 600) errors.push('OLLAMA_TIMEOUT_SECONDS must be between 10 and 600');
+  }
   if (errors.length) return { ok: false, errors };
   return {
     ok: true,
@@ -49,6 +58,7 @@ export function validateConfig(env) {
       ffmpeg: (env.FFMPEG_PATH ?? 'ffmpeg').trim() || 'ffmpeg',
       ffprobe: (env.FFPROBE_PATH ?? 'ffprobe').trim() || 'ffprobe',
       pollSeconds: poll,
+      ai: model ? { url: aiUrl, model, timeoutSeconds: aiTimeout } : null,
     },
   };
 }
