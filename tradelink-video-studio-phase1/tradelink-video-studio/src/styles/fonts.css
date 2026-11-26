@@ -1,25 +1,9 @@
-/* Self-hosted fonts. Files are added to public/fonts (see public/fonts/README.md).
-   Until they exist the browser falls back to system fonts. */
-@font-face {
-  font-family: 'Bricolage Grotesque';
-  src: url('/fonts/BricolageGrotesque-ExtraBold.woff2') format('woff2');
-  font-weight: 800;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Public Sans';
-  src: url('/fonts/PublicSans-Regular.woff2') format('woff2');
-  font-weight: 400;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Public Sans';
-  src: url('/fonts/PublicSans-SemiBold.woff2') format('woff2');
-  font-weight: 600;
-  font-display: swap;
-}
-/* Amharic: Noto Sans Ethiopic (SIL Open Font License, see /fonts/NotoSansEthiopic-OFL.txt).
-   Variable font from the official google/fonts repository, subset to Latin basics + Ethiopic. */
+/* Self-hosted fonts (no external requests). Latin: Bricolage Grotesque (headings) and Public Sans (text),
+   both SIL Open Font License (licence files beside them). Amharic: Noto Sans Ethiopic. */
+@font-face { font-family: 'Bricolage Grotesque'; src: url('/fonts/BricolageGrotesque-Bold.ttf') format('truetype'); font-weight: 600 800; font-display: swap; }
+@font-face { font-family: 'Public Sans'; src: url('/fonts/PublicSans-Regular.ttf') format('truetype'); font-weight: 400 500; font-display: swap; }
+@font-face { font-family: 'Public Sans'; src: url('/fonts/PublicSans-SemiBold.ttf') format('truetype'); font-weight: 600; font-display: swap; }
+@font-face { font-family: 'Public Sans'; src: url('/fonts/PublicSans-Bold.ttf') format('truetype'); font-weight: 700 800; font-display: swap; }
 @font-face {
   font-family: 'Noto Sans Ethiopic';
   src: url('/fonts/NotoSansEthiopic-Variable.woff2') format('woff2');
