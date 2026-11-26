@@ -111,4 +111,52 @@ test('missing FFmpeg gives an install hint', { skip: !have }, async () => {
   assert.match(calls.find((c) => c[0] === 'renderer_fail_job')[1].p_message, /no-such-ffmpeg was not found/);
 });
 
+
+// ---- Phase 5 Stage 1: brand font, own logo, own sound
+import { pickFont } from '../src/worker.js';
+import { validateConfig } from '../src/config.js';
+
+test('Latin text uses the brand font, Ethiopic keeps Noto, and a missing brand font falls back', () => {
+  assert.equal(pickFont(false), 'BricolageGrotesque-Bold.ttf');
+  assert.equal(pickFont(true), 'NotoSansEthiopic-Bold.ttf');
+  assert.equal(pickFont(false, dir), 'DejaVuSans-Bold.ttf');
+});
+
+test('config: logo and sound are optional and checked', () => {
+  const base = { STUDIO_SUPABASE_URL: 'https://abcdefgh.supabase.co', STUDIO_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_x', RENDERER_EMAIL: 'r@x.com', RENDERER_PASSWORD: 'pw' };
+  const off = validateConfig(base).config;
+  assert.equal(off.logo, null); assert.equal(off.audio, null);
+  const on = validateConfig({ ...base, BRAND_LOGO: 'C:\\b\\logo.png', AUDIO_FILE: 'C:\\b\\m.mp3', AUDIO_VOLUME: '0.3' }).config;
+  assert.equal(on.logo, 'C:\\b\\logo.png'); assert.deepEqual(on.audio, { file: 'C:\\b\\m.mp3', volume: 0.3 });
+  for (const bad of [{ BRAND_LOGO: 'x.exe' }, { AUDIO_FILE: 'x.exe' }, { AUDIO_VOLUME: '2' }, { AUDIO_VOLUME: 'abc' }]) assert.equal(validateConfig({ ...base, ...bad }).ok, false);
+});
+
+test('renders with the brand logo and your own sound: AAC audio, exact length, passes the database check', { skip: !have, timeout: 120000 }, async () => {
+  sh(['-f', 'lavfi', '-i', 'color=c=red:s=400x200', '-frames:v', '1', join(dir, 'logo.png')]);
+  sh(['-f', 'lavfi', '-i', 'sine=frequency=440:duration=4', '-c:a', 'libmp3lame', join(dir, 'tone.mp3')]);  // shorter than the video: must loop
+  const { client, calls, uploads } = fake();
+  const scenes = [
+    sc('intro', 4000, 'Test Shirt', null, 'products/a.jpg', 'zoom_in'),
+    sc('product', 4000, 'Acme', 'Short text', 'products/b.png', 'fade'),
+    sc('cta', 4000, 'WhatsApp: +251911000000', null, null, 'fade'),
+  ];
+  const res = await processJob({ client, job: mkJob('premium', scenes, 12000), cfg: { ...cfg, logo: join(dir, 'logo.png'), audio: { file: join(dir, 'tone.mp3'), volume: 0.4 } }, log: () => {} });
+  assert.equal(res, 'ready', JSON.stringify(calls.filter((c) => c[0] === 'renderer_fail_job')));
+  const v = probeFile(uploads['renders/proj1/job1-1.mp4'], 'sound.mp4');
+  assert.deepEqual(checkSummary(v, 12000), [], JSON.stringify(v));
+  assert.equal(v.has_audio, true); assert.equal(v.audio_codec, 'aac');
+  // the logo (solid red) shows in the top-left corner of the cover frame
+  writeFileSync(join(dir, 'cover_logo.jpg'), uploads['covers/proj1/job1-1.jpg']);
+  const px = spawnSync('ffmpeg', ['-v', 'error', '-i', join(dir, 'cover_logo.jpg'), '-vf', 'format=rgb24,crop=2:2:120:150', '-f', 'rawvideo', '-'], { encoding: 'buffer' });
+  const [r, g, b] = px.stdout;
+  assert.ok(r > 180 && g < 90 && b < 90, `logo pixel was ${r},${g},${b}`);
+});
+
+test('without logo and sound the output is silent and unchanged in format', { skip: !have, timeout: 120000 }, async () => {
+  const { client, uploads } = fake();
+  const scenes = [sc('intro', 4000, 'A', null, null, 'fade'), sc('product', 4000, 'B', 'text', null, 'fade'), sc('cta', 4000, 'WhatsApp: +251911000000', null, null, 'fade')];
+  assert.equal(await processJob({ client, job: mkJob('minimal', scenes, 12000), cfg, log: () => {} }), 'ready');
+  assert.equal(probeFile(uploads['renders/proj1/job1-1.mp4'], 'quiet.mp4').has_audio, false);
+});
+
 test('cleanup', () => { rmSync(dir, { recursive: true, force: true }); });

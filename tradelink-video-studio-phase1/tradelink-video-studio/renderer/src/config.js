@@ -50,6 +50,13 @@ export function validateConfig(env) {
     if (!/^http:\/\/(127\.0\.0\.1|localhost):[0-9]{2,5}$/.test(aiUrl)) errors.push('OLLAMA_URL must be http://127.0.0.1:<port> or http://localhost:<port>. The local AI must stay on this computer');
     if (!Number.isFinite(aiTimeout) || aiTimeout < 10 || aiTimeout > 600) errors.push('OLLAMA_TIMEOUT_SECONDS must be between 10 and 600');
   }
+  // Optional brand logo and background sound: files YOU put on this computer. Nothing is downloaded or chosen for you.
+  const logo = (env.BRAND_LOGO ?? '').trim();
+  const audio = (env.AUDIO_FILE ?? '').trim();
+  const volume = Number(env.AUDIO_VOLUME ?? 0.5);
+  if (logo && !/\.(png|jpe?g|webp)$/i.test(logo)) errors.push('BRAND_LOGO must be a .png, .jpg or .webp file');
+  if (audio && !/\.(mp3|m4a|aac|wav|ogg)$/i.test(audio)) errors.push('AUDIO_FILE must be a .mp3, .m4a, .aac, .wav or .ogg file');
+  if (!Number.isFinite(volume) || volume < 0 || volume > 1) errors.push('AUDIO_VOLUME must be between 0 and 1');
   if (errors.length) return { ok: false, errors };
   return {
     ok: true,
@@ -58,6 +65,8 @@ export function validateConfig(env) {
       ffmpeg: (env.FFMPEG_PATH ?? 'ffmpeg').trim() || 'ffmpeg',
       ffprobe: (env.FFPROBE_PATH ?? 'ffprobe').trim() || 'ffprobe',
       pollSeconds: poll,
+      logo: logo || null,
+      audio: audio ? { file: audio, volume } : null,
       ai: model ? { url: aiUrl, model, timeoutSeconds: aiTimeout } : null,
     },
   };

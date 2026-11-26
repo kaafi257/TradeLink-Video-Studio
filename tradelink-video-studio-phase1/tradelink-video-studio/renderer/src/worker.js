@@ -1,5 +1,6 @@
 // Renders one claimed job end to end. The `client` is a Supabase client signed in as the renderer account;
 // tests pass a fake with the same three methods (rpc, storage.from().download/upload).
+import { existsSync } from 'node:fs';
 import { copyFile, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, extname } from 'node:path';
@@ -10,6 +11,12 @@ import { wantsEthiopic } from './layout.js';
 import { checkSummary, parseBlackDetect, pictureNotes, summarizeProbe } from './verify.js';
 
 const FONT_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'fonts');
+
+/** Ethiopic text needs the Noto font. Everything else uses the brand font (Bricolage Grotesque), or DejaVu if it is missing. */
+export function pickFont(ethiopic, fontDir = FONT_DIR) {
+  if (ethiopic) return 'NotoSansEthiopic-Bold.ttf';
+  return existsSync(join(fontDir, 'BricolageGrotesque-Bold.ttf')) ? 'BricolageGrotesque-Bold.ttf' : 'DejaVuSans-Bold.ttf';
+}
 
 function friendly(e, workDir) {
   let m = e instanceof RenderError ? e.message : `Unexpected error: ${e?.message ?? e}`;
@@ -35,8 +42,11 @@ export async function processJob({ client, job, cfg, log = () => {}, fontDir = F
     if (scenes.length < 3) throw new RenderError('The job has fewer than 3 scenes');
     log(`Job ${job.id}: ${scenes.length} scenes, ${job.expected_ms / 1000}s, style ${style}${templateId ? `, template ${templateId}` : ''}, attempt ${job.attempt}`);
 
-    const fontSrc = wantsEthiopic(scenes) ? 'NotoSansEthiopic-Bold.ttf' : 'DejaVuSans-Bold.ttf';
-    await copyFile(join(fontDir, fontSrc), join(work, 'font.ttf'));
+    await copyFile(join(fontDir, pickFont(wantsEthiopic(scenes), fontDir)), join(work, 'font.ttf'));
+    let logoFile = null;
+    if (cfg.logo) { logoFile = `logo${extname(cfg.logo).toLowerCase()}`; await copyFile(cfg.logo, join(work, logoFile)); }
+    let audio = null;
+    if (cfg.audio) { const af = `audio${extname(cfg.audio.file).toLowerCase()}`; await copyFile(cfg.audio.file, join(work, af)); audio = { file: af, volume: cfg.audio.volume }; }
 
     // 1. images: download each once, then build the blurred-background still
     const imageFiles = new Map();
@@ -52,7 +62,7 @@ export async function processJob({ client, job, cfg, log = () => {}, fontDir = F
     }
 
     // 2. the video
-    const { args, textFiles } = buildRenderArgs(scenes, { style, imageFiles, fontFile: 'font.ttf', templateId });
+    const { args, textFiles } = buildRenderArgs(scenes, { style, imageFiles, fontFile: 'font.ttf', templateId, logoFile, audio });
     for (const [name, text] of Object.entries(textFiles)) await writeFile(join(work, name), text, 'utf8');
     log('Rendering with FFmpeg…');
     await run(cfg.ffmpeg, args, { cwd: work });
