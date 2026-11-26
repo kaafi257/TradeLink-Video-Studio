@@ -1,5 +1,5 @@
 // Entry point:  node src/main.js [--once | --check]
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { existsSync } from 'node:fs';
 import process from 'node:process';
@@ -20,6 +20,8 @@ if (!loaded.ok) {
   process.exit(1);
 }
 const cfg = loaded.config;
+if (cfg.logo) cfg.logo = resolve(ROOT, cfg.logo);
+if (cfg.audio) cfg.audio.file = resolve(ROOT, cfg.audio.file);
 
 async function checkTools() {
   for (const [name, bin] of [['FFmpeg', cfg.ffmpeg], ['ffprobe', cfg.ffprobe]]) {
@@ -28,6 +30,15 @@ async function checkTools() {
   }
   for (const f of ['DejaVuSans-Bold.ttf', 'NotoSansEthiopic-Bold.ttf']) {
     if (!existsSync(join(ROOT, 'fonts', f))) throw new Error(`Font missing: fonts/${f}`);
+  }
+  log(existsSync(join(ROOT, 'fonts', 'BricolageGrotesque-Bold.ttf')) ? 'Brand font: Bricolage Grotesque' : 'Brand font missing: using the plain fallback font');
+  for (const [label, file, wantAudio] of [['Logo', cfg.logo, false], ['Sound', cfg.audio?.file, true]]) {
+    if (!file) { log(`${label}: not set (optional)`); continue; }
+    if (!existsSync(file)) throw new Error(`${label} file not found: ${file}`);
+    const { out } = await run(cfg.ffprobe, ['-v', 'error', '-print_format', 'json', '-show_streams', file], { timeoutMs: 20000 });
+    const kinds = (JSON.parse(out).streams ?? []).map((s) => s.codec_type);
+    if (!kinds.includes(wantAudio ? 'audio' : 'video')) throw new Error(`${label} file is not a usable ${wantAudio ? 'sound' : 'picture'} file: ${file}`);
+    log(`${label}: ${file}`);
   }
 }
 

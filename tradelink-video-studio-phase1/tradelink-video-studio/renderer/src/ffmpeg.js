@@ -55,7 +55,7 @@ const q = (s) => `'${s}'`;
  * @param opts    { style, imageFiles: Map(image_path -> composite file name), fontFile }
  * @returns { args, textFiles: {name: content}, frames }
  */
-export function buildRenderArgs(scenes, { style, imageFiles, fontFile, outName = 'out.mp4', templateId = null }) {
+export function buildRenderArgs(scenes, { style, imageFiles, fontFile, outName = 'out.mp4', templateId = null, logoFile = null, audio = null }) {
   const inputs = [];
   const chains = [];
   const textFiles = { 'wm.txt': 'TradeLink' };
@@ -104,11 +104,30 @@ export function buildRenderArgs(scenes, { style, imageFiles, fontFile, outName =
 
   const labels = scenes.map((_, i) => `[s${i}]`).join('');
   chains.push(`${labels}concat=n=${scenes.length}:v=1:a=0[c]`);
-  chains.push(`[c]drawbox=x=40:y=104:w=290:h=84:color=black@0.38:t=fill,drawtext=fontfile=${fontFile}:textfile=wm.txt:expansion=none:fontsize=44:fontcolor=white@0.92:shadowcolor=black@0.6:shadowx=3:shadowy=3:x=60:y=130,fps=${FPS},format=yuv420p[v]`);
+  let next = scenes.length;
+  if (logoFile) {
+    // Your own logo replaces the plain "TradeLink" text mark. It is scaled to fit, never stretched.
+    inputs.push('-i', logoFile);
+    chains.push(`[${next}:v]scale=w=300:h=96:force_original_aspect_ratio=decrease,format=rgba[lg]`);
+    chains.push(`[c][lg]overlay=x=60:y=110,fps=${FPS},format=yuv420p[v]`);
+    next++;
+  } else {
+    chains.push(`[c]drawbox=x=40:y=104:w=290:h=84:color=black@0.38:t=fill,drawtext=fontfile=${fontFile}:textfile=wm.txt:expansion=none:fontsize=44:fontcolor=white@0.92:shadowcolor=black@0.6:shadowx=3:shadowy=3:x=60:y=130,fps=${FPS},format=yuv420p[v]`);
+  }
 
-  const args = ['-y', '-v', 'error', ...inputs, '-filter_complex', chains.join(';'), '-map', '[v]',
+  const total = scenes.reduce((s, x) => s + x.duration_ms, 0) / 1000;
+  const out = ['-map', '[v]'];
+  if (audio) {
+    // Your own sound: looped if short, cut to the video length, faded in and out, at the volume you chose.
+    inputs.push('-stream_loop', '-1', '-i', audio.file);
+    const vol = Math.min(1, Math.max(0, audio.volume ?? 0.5));
+    chains.push(`[${next}:a]aresample=44100,aformat=channel_layouts=stereo,atrim=0:${total.toFixed(3)},asetpts=PTS-STARTPTS,afade=t=in:st=0:d=0.6,afade=t=out:st=${Math.max(0, total - 1.5).toFixed(3)}:d=1.5,volume=${vol}[a]`);
+    out.push('-map', '[a]', '-c:a', 'aac', '-b:a', '160k', '-t', total.toFixed(3));
+  } else out.push('-an');
+
+  const args = ['-y', '-v', 'error', ...inputs, '-filter_complex', chains.join(';'), ...out,
     '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p', '-r', String(FPS),
-    '-movflags', '+faststart', '-an', outName];
+    '-movflags', '+faststart', outName];
   return { args, textFiles, frames };
 }
 

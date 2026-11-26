@@ -88,3 +88,11 @@ To start it automatically: Windows Task Scheduler → Create Basic Task → "Whe
 
 ## Optional: local AI wording
 Off by default. See "Turning the local AI on" in `docs/PHASE-4.md`. It only talks to Ollama on this same computer, and every suggestion is checked by the database before anyone can apply it.
+
+## Optional: your logo and your own sound (Phase 5)
+Both are off until you set them in `renderer\.env`. The renderer never downloads or picks any picture or music for you.
+- `BRAND_LOGO=C:\brand\logo.png` : your own logo (.png, .jpg or .webp). It replaces the plain "TradeLink" text mark in the top-left corner and is scaled to fit, never stretched.
+- `AUDIO_FILE=C:\brand\music.mp3` : your own sound (.mp3, .m4a, .aac, .wav or .ogg). It is looped if short, cut to the video length, faded in and out, and written as AAC. `AUDIO_VOLUME=0.5` sets the level (0 to 1).
+- Only use a logo and sound you own or have the right to use. Copyright for the sound is your responsibility; TikTok may mute or reject music it does not recognise as licensed for business accounts.
+- Run `npm run check`. It reports "Logo: ..." and "Sound: ..." or "not set (optional)". Leave both lines empty to keep videos silent with the text mark, exactly as before.
+- Latin text now uses the brand font Bricolage Grotesque (SIL Open Font License, in `fonts\`). Amharic keeps Noto Sans Ethiopic. If the brand font file is missing, the renderer falls back to the old font.
