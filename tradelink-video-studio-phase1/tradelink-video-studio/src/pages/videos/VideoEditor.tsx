@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { runQualityChecks, type QualityCheck, type QualityReport } from '../../lib/quality';
-import { Link, useParams } from 'react-router-dom';
+import { type QualityCheck, type QualityReport } from '../../lib/quality';
+import { Link, useLocation, useParams } from 'react-router-dom';
+import { autoFix, checkAndSave, fixTargets, loadSubject } from '../../lib/videoCheck';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth';
 import { canWriteCatalogue, formatDate } from '../../lib/catalogue';
@@ -29,6 +30,7 @@ export function VideoEditor() {
   const { t } = useI18n();
   const { profile } = useAuth();
   const canWrite = canWriteCatalogue(profile);
+  const loc = useLocation();
   const [video, setVideo] = useState<VideoProject | null>(null);
   const [scenes, setScenes] = useState<VideoSceneRow[]>([]);
   const [drafts, setDrafts] = useState<Draft[]>([]);
@@ -80,6 +82,13 @@ export function VideoEditor() {
     } else setFiles({});
   }, [id]);
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    const r = (loc.state as { queueResult?: string } | null)?.queueResult;
+    if (r === 'queued') setMsg({ kind: 'ok', text: t('vid.q.queuedAuto') });
+    else if (r === 'blocked') setMsg({ kind: 'error', text: t('vid.q.blockedAuto') });
+    else if (r === 'error') setMsg({ kind: 'error', text: t('vid.q.error') });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loc.state]);
 
   const urls = useImageUrls(scenes.map((s) => s.image_path));
 
@@ -142,22 +151,23 @@ export function VideoEditor() {
   /** Runs the quality check on the SAVED draft and stores the report. Returns it, or null when it could not be saved. */
   async function runCheck(): Promise<QualityReport | null> {
     if (!supabase || !video) return null;
-    const prod = video.video_type === 'product_showcase' || video.video_type === 'wholesale_offer';
-    const [pr, su, ca, co] = await Promise.all([
-      prod && video.product_id ? supabase.from('products').select('*').eq('id', video.product_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
-      video.supplier_id ? supabase.from('suppliers').select('*').eq('id', video.supplier_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
-      video.campaign_id ? supabase.from('campaigns').select('*').eq('id', video.campaign_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
-      video.supplier_id ? supabase.from('supplier_consents').select('withdrawn').eq('supplier_id', video.supplier_id) : Promise.resolve({ data: [], error: null }),
-    ]);
-    if (pr.error || su.error || ca.error || co.error) return null;
-    const report = runQualityChecks({
-      project: video, scenes, product: pr.data as never, supplier: su.data as never, campaign: ca.data as never,
-      consented: ((co.data ?? []) as Array<{ withdrawn: boolean }>).some((c) => !c.withdrawn),
-    });
-    const { error } = await supabase.rpc('save_quality_report', { p_project: id, p_report: report });
-    if (error) return null;
+    const subject = await loadSubject(supabase, video);
+    if (!subject) return null;
+    const report = await checkAndSave(supabase, video, scenes, subject);
+    if (!report) return null;
     await load();
     return report;
+  }
+
+  async function fixNow() {
+    if (!supabase || !video) return;
+    setBusy(true);
+    const subject = await loadSubject(supabase, video);
+    const report = video.quality_report as QualityReport | null;
+    const changed = !!subject && !!report && (await autoFix(supabase, video, scenes, subject, report));
+    await load();
+    setBusy(false);
+    setMsg({ kind: changed ? 'ok' : 'error', text: t(changed ? 'vid.q.fixed' : 'vid.q.nofix') });
   }
 
   function applyWording(sg: Suggestion, scope: 'all' | 'caption' | 'scene') {
@@ -275,7 +285,13 @@ export function VideoEditor() {
           <p className="muted small">{t('vid.q.intro')}</p>
           <QualityPanel report={video.quality_report as QualityReport | null} checkedAt={video.quality_checked_at}
             latestEdit={[video.updated_at, ...scenes.map((s) => s.updated_at)].sort().at(-1) ?? null} />
-          <div className="row"><button type="button" className="btn" disabled={busy} onClick={() => void checkOnly()}>{t('vid.q.run')}</button></div>
+          <div className="row">
+            <button type="button" className="btn" disabled={busy} onClick={() => void checkOnly()}>{t('vid.q.run')}</button>
+            {video.quality_report && fixTargets(video.quality_report as QualityReport).any && (
+              <button type="button" className="btn btn-primary" disabled={busy} onClick={() => void fixNow()}>{t('vid.q.fix')}</button>
+            )}
+          </div>
+          {video.quality_report && fixTargets(video.quality_report as QualityReport).any && <p className="muted small">{t('vid.q.fixNote')}</p>}
         </section>
       )}
 

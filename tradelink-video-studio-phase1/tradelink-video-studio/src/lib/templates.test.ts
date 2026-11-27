@@ -4,7 +4,7 @@ import { DURATIONS, STYLES, VIDEO_TYPES } from './scenes';
 
 describe('templates', () => {
   it('there are exactly the six approved templates', () => {
-    expect([...TEMPLATE_IDS].sort()).toEqual(['bold_sale', 'campaign_banner', 'clean_product', 'story_quick', 'supplier_spotlight', 'wholesale_offer']);
+    expect([...TEMPLATE_IDS].sort()).toEqual(['bold_sale', 'campaign_banner', 'campaign_minimal', 'clean_product', 'minimal_product', 'story_quick', 'supplier_spotlight', 'wholesale_bold', 'wholesale_offer']);
     for (const id of TEMPLATE_IDS) expect(TEMPLATES[id].id).toBe(id);
   });
   it('each template is well formed', () => {

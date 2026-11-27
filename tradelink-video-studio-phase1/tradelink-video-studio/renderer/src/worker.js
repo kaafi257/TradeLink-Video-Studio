@@ -62,7 +62,7 @@ export async function processJob({ client, job, cfg, log = () => {}, fontDir = F
     }
 
     // 2. the video
-    const { args, textFiles } = buildRenderArgs(scenes, { style, imageFiles, fontFile: 'font.ttf', templateId, logoFile, audio });
+    const { args, textFiles } = buildRenderArgs(scenes, { style, imageFiles, fontFile: 'font.ttf', templateId, logoFile, audio, closing: cfg.closing !== false });
     for (const [name, text] of Object.entries(textFiles)) await writeFile(join(work, name), text, 'utf8');
     log('Rendering with FFmpeg…');
     await run(cfg.ffmpeg, args, { cwd: work });

@@ -55,7 +55,7 @@ const q = (s) => `'${s}'`;
  * @param opts    { style, imageFiles: Map(image_path -> composite file name), fontFile }
  * @returns { args, textFiles: {name: content}, frames }
  */
-export function buildRenderArgs(scenes, { style, imageFiles, fontFile, outName = 'out.mp4', templateId = null, logoFile = null, audio = null }) {
+export function buildRenderArgs(scenes, { style, imageFiles, fontFile, outName = 'out.mp4', templateId = null, logoFile = null, audio = null, closing = true }) {
   const inputs = [];
   const chains = [];
   const textFiles = { 'wm.txt': 'TradeLink' };
@@ -104,18 +104,39 @@ export function buildRenderArgs(scenes, { style, imageFiles, fontFile, outName =
 
   const labels = scenes.map((_, i) => `[s${i}]`).join('');
   chains.push(`${labels}concat=n=${scenes.length}:v=1:a=0[c]`);
+  const total = scenes.reduce((s, x) => s + x.duration_ms, 0) / 1000;
   let next = scenes.length;
+  let cur = 'c';
+  // Closing frame: the last second fades to the brand colour and shows the logo (or the TradeLink wordmark).
+  // It sits ON the last scene, so the video length never changes. Skipped when the last scene is shorter than 3 s,
+  // so the contact line always stays readable first.
+  const doClose = closing !== false && scenes[scenes.length - 1].duration_ms >= 3000;
+  const t0 = (total - 1).toFixed(3);
+  const tShow = (total - 0.85).toFixed(3);
+  if (doClose) {
+    inputs.push('-f', 'lavfi', '-t', '1.000', '-i', `color=c=0x073256:s=${W}x${H}:r=${FPS}`);
+    chains.push(`[${next}:v]format=yuva420p,fade=t=in:st=0:d=0.3:alpha=1,setpts=PTS+${t0}/TB[cl]`);
+    chains.push(`[${cur}][cl]overlay=eof_action=pass[cc]`);
+    cur = 'cc';
+    next++;
+  }
   if (logoFile) {
     // Your own logo replaces the plain "TradeLink" text mark. It is scaled to fit, never stretched.
     inputs.push('-i', logoFile);
-    chains.push(`[${next}:v]scale=w=300:h=96:force_original_aspect_ratio=decrease,format=rgba[lg]`);
-    chains.push(`[c][lg]overlay=x=60:y=110,fps=${FPS},format=yuv420p[v]`);
+    if (doClose) {
+      chains.push(`[${next}:v]split=2[l1][l2]`);
+      chains.push('[l1]scale=w=300:h=96:force_original_aspect_ratio=decrease,format=rgba[lg]');
+      chains.push('[l2]scale=w=720:h=300:force_original_aspect_ratio=decrease,format=rgba[lbig]');
+      chains.push(`[${cur}][lbig]overlay=x=(W-w)/2:y=(H-h)/2:enable='gte(t,${tShow})'[cb]`);
+      cur = 'cb';
+    } else chains.push(`[${next}:v]scale=w=300:h=96:force_original_aspect_ratio=decrease,format=rgba[lg]`);
+    chains.push(`[${cur}][lg]overlay=x=60:y=110,fps=${FPS},format=yuv420p[v]`);
     next++;
   } else {
-    chains.push(`[c]drawbox=x=40:y=104:w=290:h=84:color=black@0.38:t=fill,drawtext=fontfile=${fontFile}:textfile=wm.txt:expansion=none:fontsize=44:fontcolor=white@0.92:shadowcolor=black@0.6:shadowx=3:shadowy=3:x=60:y=130,fps=${FPS},format=yuv420p[v]`);
+    const big = doClose ? `drawtext=fontfile=${fontFile}:textfile=wm.txt:expansion=none:fontsize=120:fontcolor=white:x=(w-text_w)/2:y=(h-text_h)/2:alpha='if(lt(t,${tShow}),0,min(1,(t-${tShow})/0.35))',` : '';
+    chains.push(`[${cur}]${big}drawbox=x=40:y=104:w=290:h=84:color=black@0.38:t=fill,drawtext=fontfile=${fontFile}:textfile=wm.txt:expansion=none:fontsize=44:fontcolor=white@0.92:shadowcolor=black@0.6:shadowx=3:shadowy=3:x=60:y=130,fps=${FPS},format=yuv420p[v]`);
   }
 
-  const total = scenes.reduce((s, x) => s + x.duration_ms, 0) / 1000;
   const out = ['-map', '[v]'];
   if (audio) {
     // Your own sound: looped if short, cut to the video length, faded in and out, at the volume you chose.

@@ -1,8 +1,8 @@
-// The six video templates (Phase 4). A template sets pacing (scene weights), animations and the layout style.
+// The nine video templates (six from Phase 4, three added in Phase 5). A template sets pacing (scene weights), animations and the layout style.
 // It never adds text or claims: scene text still comes only from approved catalogue data (see scenes.ts).
 import type { Animation, Duration, SceneType, Style, VideoType } from './scenes';
 
-export const TEMPLATE_IDS = ['clean_product', 'bold_sale', 'wholesale_offer', 'supplier_spotlight', 'campaign_banner', 'story_quick'] as const;
+export const TEMPLATE_IDS = ['clean_product', 'bold_sale', 'wholesale_offer', 'supplier_spotlight', 'campaign_banner', 'story_quick', 'minimal_product', 'wholesale_bold', 'campaign_minimal'] as const;
 export type TemplateId = (typeof TEMPLATE_IDS)[number];
 
 export interface Template {
@@ -40,6 +40,18 @@ export const TEMPLATES: Record<TemplateId, Template> = {
   story_quick: {
     id: 'story_quick', videoTypes: ['product_showcase', 'wholesale_offer'], style: 'dynamic', durations: [15], defaultDuration: 15,
     weights: { intro: 2, product: 3, price: 3, wholesale: 3, cta: 2 }, animations: { image: ['zoom_in', 'pan_left'], text: 'slide_up' },
+  },
+  minimal_product: {
+    id: 'minimal_product', videoTypes: ['product_showcase'], style: 'minimal', durations: [15, 20, 30], defaultDuration: 20,
+    weights: {}, animations: { image: ['fade'], text: 'none' },
+  },
+  wholesale_bold: {
+    id: 'wholesale_bold', videoTypes: ['wholesale_offer'], style: 'dynamic', durations: [15, 20, 30], defaultDuration: 15,
+    weights: { wholesale: 5, cta: 3 }, animations: { image: ['pan_left', 'zoom_in'], text: 'slide_up' },
+  },
+  campaign_minimal: {
+    id: 'campaign_minimal', videoTypes: ['campaign_promotion'], style: 'minimal', durations: [15, 20, 30], defaultDuration: 20,
+    weights: { campaign: 4 }, animations: { image: ['fade'], text: 'none' },
   },
 };
 
