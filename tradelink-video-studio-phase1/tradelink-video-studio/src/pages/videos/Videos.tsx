@@ -36,7 +36,7 @@ export function Videos() {
     <>
       <div className="row between">
         <h1>{t('vid.title')}</h1>
-        {canWrite && <span className="row"><Link className="btn btn-primary" to="/videos/quick">{t('vid.quick.open')}</Link> <Link className="btn" to="/videos/new">{t('vid.new')}</Link></span>}
+        {canWrite && <span className="row"><Link className="btn btn-primary" to="/videos/quick">{t('vid.quick.open')}</Link> <Link className="btn" to="/videos/batch">{t('batch.open')}</Link> <Link className="btn" to="/videos/new">{t('vid.new')}</Link></span>}
       </div>
       {failed && <p role="alert" className="error">{t('common.loadError')}</p>}
       {rows === null && !failed && <p className="muted">{t('common.loading')}</p>}
