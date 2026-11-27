@@ -1,6 +1,6 @@
 # Phase 5: Better videos, fewer manual steps, easier to use (running notes)
 
-Approved plan order: Stage 1 Better videos, Stage 2 Fewer manual steps, Stage 3 Marketplace sync (needs its own separate "go"), Stage 4 Easier to use.
+Approved plan order: Stage 1 Better videos, Stage 2 Fewer manual steps, Stage 3 Marketplace sync (needs its own separate "go"), Stage 4 Easier to use. Stage 3 is built: see `docs/PHASE-5-SYNC.md`.
 Rules unchanged: $0, no new npm dependencies, nothing publishes automatically, Draft review stays, nothing invented.
 
 ## Stage 1 (part 1): brand font, own logo, own sound

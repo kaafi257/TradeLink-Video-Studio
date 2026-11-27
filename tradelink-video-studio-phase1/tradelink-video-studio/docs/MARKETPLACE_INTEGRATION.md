@@ -1,4 +1,4 @@
-# Marketplace integration (design record; NOT built in Phase 1)
+# Marketplace integration (design record; the sync is built in Phase 5 Stage 3 — see PHASE-5-SYNC.md)
 
 Source: the Phase 0 inspection of the live marketplace database (21 November 2026).
 
