@@ -96,3 +96,7 @@ Both are off until you set them in `renderer\.env`. The renderer never downloads
 - Only use a logo and sound you own or have the right to use. Copyright for the sound is your responsibility; TikTok may mute or reject music it does not recognise as licensed for business accounts.
 - Run `npm run check`. It reports "Logo: ..." and "Sound: ..." or "not set (optional)". Leave both lines empty to keep videos silent with the text mark, exactly as before.
 - Latin text now uses the brand font Bricolage Grotesque (SIL Open Font License, in `fonts\`). Amharic keeps Noto Sans Ethiopic. If the brand font file is missing, the renderer falls back to the old font.
+
+## Closing frame (Phase 5 Stage A)
+- On by default. The last second of every video fades to the brand blue and shows your `BRAND_LOGO` (or the TradeLink name) in the middle. It sits on top of the last scene, so the video length does not change. It is skipped when the last scene is shorter than 3 seconds, so the contact line stays readable.
+- `CLOSING_FRAME=off` in `.env` turns it off.

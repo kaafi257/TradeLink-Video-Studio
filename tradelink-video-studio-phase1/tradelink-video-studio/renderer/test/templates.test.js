@@ -9,10 +9,10 @@ import { layoutScene } from '../src/layout.js';
 import { processJob } from '../src/worker.js';
 import { checkSummary } from '../src/verify.js';
 
-const IDS = ['clean_product', 'bold_sale', 'wholesale_offer', 'supplier_spotlight', 'campaign_banner', 'story_quick'];
+const IDS = ['clean_product', 'bold_sale', 'wholesale_offer', 'supplier_spotlight', 'campaign_banner', 'story_quick', 'minimal_product', 'wholesale_bold', 'campaign_minimal'];
 const have = spawnSync('ffmpeg', ['-version']).status === 0 && spawnSync('ffprobe', ['-version']).status === 0;
 
-test('there is a layout entry for each of the six templates and unknown ids change nothing', () => {
+test('there is a layout entry for each of the nine templates and unknown ids change nothing', () => {
   assert.deepEqual(Object.keys(TEMPLATE_LAYOUT).sort(), [...IDS].sort());
   for (const bad of [null, undefined, 'nope', 'constructor', '__proto__', 5]) assert.deepEqual(templateLayout(bad), {});
 });

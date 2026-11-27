@@ -159,4 +159,47 @@ test('without logo and sound the output is silent and unchanged in format', { sk
   assert.equal(probeFile(uploads['renders/proj1/job1-1.mp4'], 'quiet.mp4').has_audio, false);
 });
 
+// ---- Phase 5 Stage A: closing frame (last second, on top of the last scene: the length never changes)
+const pixelAt = (buf, name, t, x, y) => {
+  writeFileSync(join(dir, name), buf);
+  const r = spawnSync('ffmpeg', ['-v', 'error', '-ss', String(t), '-i', join(dir, name), '-vf', `format=rgb24,crop=2:2:${x}:${y}`, '-frames:v', '1', '-f', 'rawvideo', '-'], { encoding: 'buffer' });
+  return [r.stdout[0], r.stdout[1], r.stdout[2]];
+};
+const close3 = () => [sc('intro', 4000, 'A', null, null, 'fade'), sc('product', 4000, 'B', 'text', null, 'fade'), sc('cta', 4000, 'WhatsApp: +251911000000', null, null, 'none')];
+
+test('closing frame: last second turns brand navy, length unchanged, still passes the format check', { skip: !have, timeout: 120000 }, async () => {
+  const { client, uploads } = fake();
+  assert.equal(await processJob({ client, job: mkJob('minimal', close3(), 12000), cfg, log: () => {} }), 'ready');
+  const buf = uploads['renders/proj1/job1-1.mp4'];
+  assert.deepEqual(checkSummary(probeFile(buf, 'close.mp4'), 12000), []);
+  const [r, g, b] = pixelAt(buf, 'close.mp4', 11.6, 900, 1700);          // navy 0x073256 = 7,50,86
+  assert.ok(r < 40 && g > 30 && g < 80 && b > 60 && b < 110, `closing pixel was ${r},${g},${b}`);
+  const before = pixelAt(buf, 'close.mp4', 9.0, 900, 1700);               // minimal style: light page colour before the end
+  assert.ok(before[0] > 200, `pixel before the closing frame was ${before}`);
+});
+
+test('closing frame can be switched off, and is skipped when the last scene is shorter than 3 s', { skip: !have, timeout: 120000 }, async () => {
+  let c = fake();
+  assert.equal(await processJob({ client: c.client, job: mkJob('minimal', close3(), 12000), cfg: { ...cfg, closing: false }, log: () => {} }), 'ready');
+  assert.ok(pixelAt(c.uploads['renders/proj1/job1-1.mp4'], 'off.mp4', 11.6, 900, 1700)[0] > 200, 'no closing frame when off');
+  c = fake();
+  const short = [sc('intro', 5000, 'A', null, null, 'fade'), sc('product', 5000, 'B', 'text', null, 'fade'), sc('cta', 2000, 'WhatsApp: +251911000000', null, null, 'none')];
+  assert.equal(await processJob({ client: c.client, job: mkJob('minimal', short, 12000), cfg, log: () => {} }), 'ready');
+  assert.ok(pixelAt(c.uploads['renders/proj1/job1-1.mp4'], 'short.mp4', 11.6, 900, 1700)[0] > 200, 'short last scene keeps its contact readable');
+});
+
+test('closing frame with your own logo shows the logo in the middle', { skip: !have, timeout: 120000 }, async () => {
+  sh(['-f', 'lavfi', '-i', 'color=c=red:s=400x200', '-frames:v', '1', join(dir, 'logo2.png')]);
+  const { client, uploads } = fake();
+  assert.equal(await processJob({ client, job: mkJob('minimal', close3(), 12000), cfg: { ...cfg, logo: join(dir, 'logo2.png') }, log: () => {} }), 'ready');
+  const [r, g, b] = pixelAt(uploads['renders/proj1/job1-1.mp4'], 'closelogo.mp4', 11.7, 540, 960);
+  assert.ok(r > 180 && g < 90 && b < 90, `centre pixel was ${r},${g},${b}`);
+});
+
+test('config: CLOSING_FRAME=off disables the closing frame', () => {
+  const base = { STUDIO_SUPABASE_URL: 'https://abcdefgh.supabase.co', STUDIO_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_x', RENDERER_EMAIL: 'r@x.com', RENDERER_PASSWORD: 'pw' };
+  assert.equal(validateConfig(base).config.closing, true);
+  assert.equal(validateConfig({ ...base, CLOSING_FRAME: 'off' }).config.closing, false);
+});
+
 test('cleanup', () => { rmSync(dir, { recursive: true, force: true }); });

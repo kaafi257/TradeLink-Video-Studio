@@ -18,3 +18,5 @@ Rules unchanged: $0, no new npm dependencies, nothing publishes automatically, D
 - Fixed an old layout bug: two-column form rows did not collapse on phones.
 - No feature, database or dependency change. Tests: vitest 97, browser suites 97 + 66, plus 113 checks in a screenshot run (light and dark, desktop and phone, no sideways scrolling).
 - Not checked: Amharic screens in real browsers, very old browsers, and a real iPhone/Android device.
+
+Stage A (fewer steps per video) is built: see `docs/PHASE-5-STAGE-A.md`.

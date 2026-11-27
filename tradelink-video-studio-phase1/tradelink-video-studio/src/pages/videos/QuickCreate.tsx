@@ -6,6 +6,7 @@ import { canWriteCatalogue, videoEligible, type Product } from '../../lib/catalo
 import { CTA_TYPES, VIDEO_TYPES, type CtaType, type Lang, type VideoType } from '../../lib/scenes';
 import { TEMPLATES, templatesFor, type TemplateId } from '../../lib/templates';
 import { buildPlan, draftCopy, saveVideoDraft } from '../../lib/videoCreate';
+import { checkFixQueue } from '../../lib/videoCheck';
 import { useI18n } from '../../i18n/i18n';
 import type { MessageKey } from '../../i18n/en';
 import { useVideoCatalogue } from './useVideoCatalogue';
@@ -40,8 +41,8 @@ export function QuickCreate() {
 
   if (!canWrite) return <Navigate to="/videos" replace />;
 
-  async function create(e: FormEvent) {
-    e.preventDefault();
+  async function create(e: FormEvent | null, andQueue = false) {
+    e?.preventDefault();
     const subject = type === 'supplier_spotlight' ? suppliers.find((x) => x.id === subjectId)
       : type === 'campaign_promotion' ? campaigns.find((x) => x.id === subjectId) : eligible.find((x) => x.id === subjectId);
     if (!supabase || !subject) return setProblem('vid.problem.noSubject');
@@ -60,6 +61,11 @@ export function QuickCreate() {
       ...args, title: `${t(`vid.type.${type}` as MessageKey)}: ${subject.name}`, subjectId, scenes: plan.scenes, copy,
     });
     if (!id) { setBusy(false); return setError(true); }
+    if (andQueue) {
+      const out = await checkFixQueue(supabase, id);
+      nav(`/videos/${id}`, { state: { queueResult: out.kind } });
+      return;
+    }
     nav(`/videos/${id}`);
   }
 
@@ -107,10 +113,12 @@ export function QuickCreate() {
           </div>
           <p className="muted small">{t('vid.quick.summary')}</p>
           <p className="muted small">{t('vid.quick.stops')}</p>
+          <p className="muted small">{t('vid.quick.queueNote')}</p>
           {problem && <p role="alert" className="error">{t(problem)}{problem === 'vid.problem.needsConsent' && <> <Link to="/videos/new">{t('vid.quick.more')}</Link></>}</p>}
           {error && <p role="alert" className="error">{t('common.saveError')}</p>}
           <div className="row">
-            <button type="submit" className="btn btn-primary big" disabled={busy}>{busy ? t('common.saving') : t('vid.quick.create')}</button>
+            <button type="button" className="btn btn-primary big" disabled={busy} onClick={() => void create(null, true)}>{busy ? t('common.saving') : t('vid.quick.createQueue')}</button>
+            <button type="submit" className="btn big" disabled={busy}>{t('vid.quick.create')}</button>
             <Link className="btn" to="/videos/new">{t('vid.quick.more')}</Link>
           </div>
         </form>
