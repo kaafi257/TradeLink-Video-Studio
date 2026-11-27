@@ -20,3 +20,5 @@ Rules unchanged: $0, no new npm dependencies, nothing publishes automatically, D
 - Not checked: Amharic screens in real browsers, very old browsers, and a real iPhone/Android device.
 
 Stage A (fewer steps per video) is built: see `docs/PHASE-5-STAGE-A.md`.
+
+Stage B (batch create) is built: see `docs/PHASE-5-STAGE-B.md`.
