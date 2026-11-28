@@ -24,3 +24,5 @@ Stage A (fewer steps per video) is built: see `docs/PHASE-5-STAGE-A.md`.
 Stage B (batch create) is built: see `docs/PHASE-5-STAGE-B.md`.
 
 Stage Q (video quality and polish) is built: see `docs/PHASE-5-STAGE-Q.md`.
+
+Stage C (automatic rendering) is built: see `docs/PHASE-5-STAGE-C.md`.
