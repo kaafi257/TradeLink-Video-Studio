@@ -22,3 +22,5 @@ Rules unchanged: $0, no new npm dependencies, nothing publishes automatically, D
 Stage A (fewer steps per video) is built: see `docs/PHASE-5-STAGE-A.md`.
 
 Stage B (batch create) is built: see `docs/PHASE-5-STAGE-B.md`.
+
+Stage Q (video quality and polish) is built: see `docs/PHASE-5-STAGE-Q.md`.

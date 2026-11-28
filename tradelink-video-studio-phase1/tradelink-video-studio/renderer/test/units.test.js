@@ -67,7 +67,10 @@ test('layout: image scenes get a band, text-only scenes are centred, CTA gets a 
   assert.equal(img.motion, 'zoom_in'); assert.ok(img.boxes.length >= 1);
   assert.ok(img.lines.every((l) => l.y + l.size <= 1480));
   const price = layoutScene({ scene_type: 'price', headline: 'ETB 100.00', body: 'ETB 120.00', animation: 'fade' }, 'dynamic', false);
-  assert.equal(price.boxes.length, 0); assert.equal(price.motion, 'static');
+  assert.equal(price.motion, 'static');
+  assert.ok(price.boxes.some((b) => b.color === '0xe9a914' && b.h > 100), 'price sits on a gold tag');
+  assert.ok(price.boxes.some((b) => b.h <= 8), 'old price is struck through');
+  assert.equal(price.lines.find((l) => l.kind === 'head').text, 'ETB 100.00'); assert.equal(price.lines.find((l) => l.kind === 'body').text, 'ETB 120.00');
   const cta = layoutScene({ scene_type: 'cta', headline: 'WhatsApp: +251900000000', body: null, animation: 'fade' }, 'minimal', false);
   assert.ok(cta.boxes.some((b) => b.color === '0xe9a914'));
   const wh = layoutScene({ scene_type: 'wholesale', headline: 'Minimum order: 12 bag', body: 'Request a Quote', animation: 'fade' }, 'premium', false);
@@ -87,8 +90,37 @@ test('render args: exact frame total, 1080x1920 concat, no audio, relative file 
   assert.equal(frames, 600);
   assert.ok(args.includes('-an') && args.includes('libx264') && args.includes('yuv420p'));
   const fc = args[args.indexOf('-filter_complex') + 1];
-  assert.match(fc, /concat=n=3:v=1:a=0/);
+  assert.match(fc, /xfade=transition=slideleft:duration=0\.35:offset=5\.000/); assert.match(fc, /xfade=transition=fade:duration=0\.35:offset=15\.000/);
+  assert.ok(!/concat=/.test(fc));
   assert.ok(!/[A-Za-z]:\\/.test(fc) && !fc.includes('/tmp'));
   assert.equal(textFiles['wm.txt'], 'TradeLink');
   assert.ok(Object.keys(textFiles).some((k) => k.startsWith('t_0_')));
+});
+
+const mk = (ds, anim = 'zoom_in') => ds.map((d, i) => ({ scene_type: i === ds.length - 1 ? 'cta' : 'intro', duration_ms: d, headline: `H${i}`, body: null, image_path: null, animation: anim }));
+const fcOf = (r) => r.args[r.args.indexOf('-filter_complex') + 1];
+
+test('transitions: scenes are drawn longer by the overlap so the total length is unchanged', () => {
+  const r = buildRenderArgs(mk([5000, 10000, 5000]), { style: 'premium', imageFiles: new Map(), fontFile: 'font.ttf' });
+  const ts = r.args.flatMap((a, i) => (a === '-t' ? [r.args[i + 1]] : []));
+  assert.deepEqual(ts.slice(0, 3), ['5.350', '10.350', '5.000']);
+  assert.equal(r.args[r.args.indexOf('-t', r.args.indexOf('libx264')) + 1], '20.000');
+});
+
+test('transitions: off, or a very short scene, falls back to plain concat; an unanimated scene gets a one-frame cut', () => {
+  assert.match(fcOf(buildRenderArgs(mk([5000, 10000, 5000]), { style: 'premium', imageFiles: new Map(), fontFile: 'font.ttf', transitions: false })), /concat=n=3/);
+  assert.match(fcOf(buildRenderArgs(mk([5000, 1000, 5000]), { style: 'premium', imageFiles: new Map(), fontFile: 'font.ttf' })), /concat=n=3/);
+  const cut = fcOf(buildRenderArgs(mk([5000, 5000, 5000], 'none'), { style: 'premium', imageFiles: new Map(), fontFile: 'font.ttf' }));
+  assert.match(cut, /xfade=transition=fade:duration=0\.04/);
+});
+
+test('quality: high by default, fast on request; progress bar and backdrop are used', () => {
+  const hi = buildRenderArgs(mk([5000, 5000, 5000]), { style: 'premium', imageFiles: new Map(), fontFile: 'font.ttf', backdropFile: 'backdrop.png' });
+  assert.ok(hi.args.includes('medium') && hi.args.includes('17'));
+  assert.ok(hi.args.includes('backdrop.png'), 'text-only scenes use the blurred product backdrop');
+  assert.match(fcOf(hi), /overlay=x='-w\+w\*t\/15\.000'/);
+  const fast = buildRenderArgs(mk([5000, 5000, 5000]), { style: 'premium', imageFiles: new Map(), fontFile: 'font.ttf', quality: 'fast', progress: false });
+  assert.ok(fast.args.includes('veryfast') && fast.args.includes('20')); assert.ok(!/0xe9a914:s=1080x8/.test(fast.args.join(' ')));
+  const minimal = buildRenderArgs(mk([5000, 5000, 5000]), { style: 'minimal', imageFiles: new Map(), fontFile: 'font.ttf', backdropFile: 'backdrop.png' });
+  assert.ok(!minimal.args.includes('backdrop.png'), 'minimal keeps its light plain background');
 });

@@ -7,6 +7,7 @@ import {
 } from '../../lib/catalogue';
 import { removeImages, saveWithImage } from '../../lib/images';
 import { useImageUrls } from '../../lib/useImageUrls';
+import { Loading } from '../../components/Loading';
 import { useI18n } from '../../i18n/i18n';
 import type { MessageKey } from '../../i18n/en';
 import { Sheet } from '../../components/Sheet';
@@ -79,7 +80,7 @@ export function Products() {
   }
 
   if (failed) return <p className="error" role="alert">{t('common.loadError')}</p>;
-  if (!products) return <p className="splash">{t('common.loading')}</p>;
+  if (!products) return <Loading />;
   const current = panel && panel.kind !== 'form' ? products.find((p) => p.id === panel.id) ?? null : null;
 
   return (

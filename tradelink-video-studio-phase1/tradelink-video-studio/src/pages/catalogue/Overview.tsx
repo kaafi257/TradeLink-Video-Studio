@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth';
 import { canWriteCatalogue, videoEligible, type Product } from '../../lib/catalogue';
+import { Loading } from '../../components/Loading';
 import { useI18n } from '../../i18n/i18n';
 
 interface Counts { products: Product[]; categories: number; suppliers: number; campaigns: number }
@@ -28,7 +29,7 @@ export function Overview() {
   }, []);
 
   if (failed) return <p className="error" role="alert">{t('common.loadError')}</p>;
-  if (!data) return <p className="splash">{t('common.loading')}</p>;
+  if (!data) return <Loading />;
   const ready = data.products.filter(videoEligible).length;
   const stats: Array<[string, number]> = [
     ['ov.products', data.products.length], ['ov.categories', data.categories], ['ov.suppliers', data.suppliers],

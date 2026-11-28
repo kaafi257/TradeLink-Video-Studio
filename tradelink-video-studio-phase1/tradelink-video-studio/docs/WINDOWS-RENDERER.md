@@ -100,3 +100,8 @@ Both are off until you set them in `renderer\.env`. The renderer never downloads
 ## Closing frame (Phase 5 Stage A)
 - On by default. The last second of every video fades to the brand blue and shows your `BRAND_LOGO` (or the TradeLink name) in the middle. It sits on top of the last scene, so the video length does not change. It is skipped when the last scene is shorter than 3 seconds, so the contact line stays readable.
 - `CLOSING_FRAME=off` in `.env` turns it off.
+
+## Video quality (Phase 5 Stage Q)
+- Scenes join with slide and fade transitions (the total length does not change), text-only scenes sit on a blurred brand-blue copy of the product picture, the price scene is a sale tag with the old price struck through, photos get a light contrast/sharpness lift, and a thin gold progress bar runs along the top.
+- `RENDER_QUALITY=high` (default) encodes at CRF 17, preset medium. A 20-second video takes roughly 20–60 seconds on a normal PC. Set `RENDER_QUALITY=fast` in `.env` if renders feel too slow.
+- Needs a normal recent FFmpeg (xfade filter). The "essentials" build from gyan.dev has it. `npm run check` will tell you if it is missing.

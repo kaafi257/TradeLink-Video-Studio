@@ -36,17 +36,31 @@ export function compositeArgs(srcName, destName) {
     '-frames:v', '1', destName];
 }
 
+/** A soft, brand-navy tinted, blurred copy of the product picture that fills the whole frame (backdrop for the text-only scenes). */
+export function backdropArgs(srcName, destName) {
+  return ['-y', '-v', 'error', '-i', srcName, '-vf',
+    `scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},gblur=sigma=34,eq=brightness=-0.2:saturation=0.8,drawbox=x=0:y=0:w=${W}:h=${H}:color=0x073256@0.8:t=fill,format=rgb24`,
+    '-frames:v', '1', destName];
+}
+
+// Smooth ease-in-out (smoothstep) so zooms and pans start and stop gently instead of moving at a constant speed.
+const ease = (p) => `((${p})*(${p})*(3-2*(${p})))`;
+
 function zoompan(motion, n) {
   const N = Math.max(1, n);
+  const e = ease(`on/${N}`);
   const cy = "y='ih/2-(ih/zoom/2)'";
   switch (motion) {
-    case 'zoom_in': return `z='1+0.14*on/${N}':x='iw/2-(iw/zoom/2)':${cy}`;
-    case 'zoom_out': return `z='1.14-0.14*on/${N}':x='iw/2-(iw/zoom/2)':${cy}`;
-    case 'pan_left': return `z='1.15':x='(iw-iw/zoom)*(1-on/${N})':${cy}`;
-    case 'pan_right': return `z='1.15':x='(iw-iw/zoom)*on/${N}':${cy}`;
+    case 'zoom_in': return `z='1+0.14*${e}':x='iw/2-(iw/zoom/2)':${cy}`;
+    case 'zoom_out': return `z='1.14-0.14*${e}':x='iw/2-(iw/zoom/2)':${cy}`;
+    case 'pan_left': return `z='1.15':x='(iw-iw/zoom)*(1-${e})':${cy}`;
+    case 'pan_right': return `z='1.15':x='(iw-iw/zoom)*${e}':${cy}`;
     default: return "z='1':x='0':y='0'";
   }
 }
+
+const TRANSITIONS = ['slideleft', 'fade', 'slideup', 'fade', 'wipeleft'];
+const TRANSITION_S = 0.35;
 
 const q = (s) => `'${s}'`;
 
@@ -55,27 +69,39 @@ const q = (s) => `'${s}'`;
  * @param opts    { style, imageFiles: Map(image_path -> composite file name), fontFile }
  * @returns { args, textFiles: {name: content}, frames }
  */
-export function buildRenderArgs(scenes, { style, imageFiles, fontFile, outName = 'out.mp4', templateId = null, logoFile = null, audio = null, closing = true }) {
+export function buildRenderArgs(scenes, { style, imageFiles, fontFile, outName = 'out.mp4', templateId = null, logoFile = null, audio = null, closing = true, backdropFile = null, quality = 'high', transitions = true, progress = true }) {
   const inputs = [];
   const chains = [];
   const textFiles = { 'wm.txt': 'TradeLink' };
   let frames = 0;
 
+  // Transitions overlap neighbouring scenes, so every scene except the last is drawn a little longer (by its transition
+  // time); the overlaps then give back exactly the planned length. A scene without animation gets a one-frame cut.
+  const useTrans = transitions !== false && scenes.length > 1 && scenes.every((x) => x.duration_ms >= 1500);
+  const gap = (i) => (!useTrans || i >= scenes.length - 1 ? 0 : scenes[i + 1].animation === 'none' ? 0.04 : TRANSITION_S);
+  const last = scenes.length - 1;
+  const backdrop = backdropFile && style !== 'minimal' ? backdropFile : null;
+
   scenes.forEach((scene, i) => {
     const secs = scene.duration_ms / 1000;
-    const n = Math.round(secs * FPS);
-    frames += n;
+    const secsExt = secs + gap(i);
+    const n = Math.round(secsExt * FPS);
+    frames += Math.round(secs * FPS);
     const imgFile = scene.image_path ? imageFiles.get(scene.image_path) : null;
     const lay = layoutScene(scene, style, !!imgFile, templateId);
 
     if (imgFile) {
-      inputs.push('-loop', '1', '-framerate', String(FPS), '-t', secs.toFixed(3), '-i', imgFile);
+      inputs.push('-loop', '1', '-framerate', String(FPS), '-t', secsExt.toFixed(3), '-i', imgFile);
+    } else if (backdrop) {
+      inputs.push('-loop', '1', '-framerate', String(FPS), '-t', secsExt.toFixed(3), '-i', backdrop);
     } else {
-      inputs.push('-f', 'lavfi', '-t', secs.toFixed(3), '-i', `color=c=${lay.bg}:s=${W}x${H}:r=${FPS}`);
+      inputs.push('-f', 'lavfi', '-t', secsExt.toFixed(3), '-i', `color=c=${lay.bg}:s=${W}x${H}:r=${FPS}`);
     }
 
     const f = [];
-    f.push(imgFile ? `zoompan=${zoompan(lay.motion, n)}:d=1:s=${W}x${H}:fps=${FPS}` : 'null');
+    if (imgFile) f.push(`zoompan=${zoompan(lay.motion, n)}:d=1:s=${W}x${H}:fps=${FPS}`, 'eq=contrast=1.04:saturation=1.1', 'unsharp=5:5:0.45:5:5:0');
+    else if (backdrop) f.push(`zoompan=${zoompan('zoom_in', n)}:d=1:s=${W}x${H}:fps=${FPS}`);
+    else if (style !== 'minimal') f.push('vignette=angle=1.15');
     f.push('format=yuv420p', 'setsar=1');
 
     for (const b of lay.boxes) f.push(`drawbox=x=${b.x}:y=${b.y}:w=${b.w}:h=${b.h}:color=${b.color}:t=fill`);
@@ -96,15 +122,27 @@ export function buildRenderArgs(scenes, { style, imageFiles, fontFile, outName =
     });
 
     if (lay.fades) {
-      f.push(`fade=t=in:st=0:d=${lay.fadeS}`);
-      f.push(`fade=t=out:st=${Math.max(0, secs - lay.fadeS).toFixed(3)}:d=${lay.fadeS}`);
+      if (!useTrans || i === 0) f.push(`fade=t=in:st=0:d=${lay.fadeS}`);
+      if (!useTrans || i === last) f.push(`fade=t=out:st=${Math.max(0, secs - lay.fadeS).toFixed(3)}:d=${lay.fadeS}`);
     }
+    f.push(`fps=${FPS}`, `settb=1/${FPS}`);
     chains.push(`[${i}:v]${f.join(',')}[s${i}]`);
   });
 
-  const labels = scenes.map((_, i) => `[s${i}]`).join('');
-  chains.push(`${labels}concat=n=${scenes.length}:v=1:a=0[c]`);
   const total = scenes.reduce((s, x) => s + x.duration_ms, 0) / 1000;
+  if (useTrans) {
+    let acc = 's0';
+    let cum = 0;
+    for (let k = 0; k < last; k++) {
+      cum += scenes[k].duration_ms / 1000;
+      const d = gap(k);
+      chains.push(`[${acc}][s${k + 1}]xfade=transition=${d < 0.1 ? 'fade' : TRANSITIONS[k % TRANSITIONS.length]}:duration=${d}:offset=${cum.toFixed(3)}[x${k}]`);
+      acc = `x${k}`;
+    }
+    chains.push(`[${acc}]null[c]`);
+  } else {
+    chains.push(`${scenes.map((_, i) => `[s${i}]`).join('')}concat=n=${scenes.length}:v=1:a=0[c]`);
+  }
   let next = scenes.length;
   let cur = 'c';
   // Closing frame: the last second fades to the brand colour and shows the logo (or the TradeLink wordmark).
@@ -118,6 +156,12 @@ export function buildRenderArgs(scenes, { style, imageFiles, fontFile, outName =
     chains.push(`[${next}:v]format=yuva420p,fade=t=in:st=0:d=0.3:alpha=1,setpts=PTS+${t0}/TB[cl]`);
     chains.push(`[${cur}][cl]overlay=eof_action=pass[cc]`);
     cur = 'cc';
+    next++;
+  }
+  if (progress !== false) {
+    inputs.push('-f', 'lavfi', '-t', total.toFixed(3), '-i', `color=c=0xe9a914:s=${W}x8:r=${FPS}`);
+    chains.push(`[${cur}][${next}:v]overlay=x='-w+w*t/${total.toFixed(3)}':y=0:eof_action=pass[cp]`);
+    cur = 'cp';
     next++;
   }
   if (logoFile) {
@@ -147,7 +191,8 @@ export function buildRenderArgs(scenes, { style, imageFiles, fontFile, outName =
   } else out.push('-an');
 
   const args = ['-y', '-v', 'error', ...inputs, '-filter_complex', chains.join(';'), ...out,
-    '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p', '-r', String(FPS),
+    '-c:v', 'libx264', ...(quality === 'fast' ? ['-preset', 'veryfast', '-crf', '20'] : ['-preset', 'medium', '-crf', '17', '-profile:v', 'high']),
+    '-pix_fmt', 'yuv420p', '-r', String(FPS), '-t', total.toFixed(3),
     '-movflags', '+faststart', outName];
   return { args, textFiles, frames };
 }

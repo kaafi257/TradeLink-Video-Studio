@@ -28,6 +28,10 @@ async function checkTools() {
     const { out } = await run(bin, ['-version'], { timeoutMs: 15000 });
     log(`${name}: ${out.split(/\r?\n/)[0]}`);
   }
+  const filters = (await run(cfg.ffmpeg, ['-hide_banner', '-filters'], { timeoutMs: 15000 })).out;
+  const missing = ['xfade', 'zoompan', 'drawtext', 'gblur', 'unsharp', 'vignette', 'blackdetect'].filter((n) => !new RegExp(`\\s${n}\\s`).test(filters));
+  if (missing.length) throw new Error(`This FFmpeg is missing needed filters: ${missing.join(', ')}. Install the "essentials" build from gyan.dev (see the install guide).`);
+  log(`Video quality: ${cfg.quality === 'fast' ? 'fast' : 'high'} (set RENDER_QUALITY=fast in .env for quicker renders)`);
   for (const f of ['DejaVuSans-Bold.ttf', 'NotoSansEthiopic-Bold.ttf']) {
     if (!existsSync(join(ROOT, 'fonts', f))) throw new Error(`Font missing: fonts/${f}`);
   }

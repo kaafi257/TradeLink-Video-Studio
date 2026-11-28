@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { type QualityCheck, type QualityReport } from '../../lib/quality';
 import { Link, useLocation, useParams } from 'react-router-dom';
+import { Storyboard } from './Storyboard';
 import { autoFix, checkAndSave, fixTargets, loadSubject } from '../../lib/videoCheck';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth';
@@ -12,6 +13,7 @@ import {
   availableActions, describeFile, formatHashtags, isEditable, parseHashtags, parseSeconds, postText, sceneTotalMs, timeMatches,
   type RenderJob, type StatusHistoryRow, type VideoAction, type VideoProject, type VideoSceneRow,
 } from '../../lib/videos';
+import { Loading } from '../../components/Loading';
 import { useI18n } from '../../i18n/i18n';
 import type { MessageKey } from '../../i18n/en';
 import { StatusChip } from './Videos';
@@ -92,7 +94,7 @@ export function VideoEditor() {
 
   const urls = useImageUrls(scenes.map((s) => s.image_path));
 
-  if (state === 'loading') return <p className="muted">{t('common.loading')}</p>;
+  if (state === 'loading') return <Loading />;
   if (state === 'failed') return <p role="alert" className="error">{t('common.loadError')}</p>;
   if (state === 'missing' || !video) return <><p><Link to="/videos">← {t('vid.back')}</Link></p><p className="card">{t('vid.ed.notFound')}</p></>;
 
@@ -296,6 +298,8 @@ export function VideoEditor() {
       )}
 
       {editable && <SuggestPanel video={video} scenes={scenes} disabled={busy} onApply={(sg, scope) => applyWording(sg, scope)} />}
+
+      <Storyboard scenes={scenes} urls={urls} style={video.style} />
 
       <section className="card">
         <h2>{t('vid.ed.scenes')}</h2>

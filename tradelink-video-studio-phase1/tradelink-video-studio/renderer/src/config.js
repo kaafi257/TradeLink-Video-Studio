@@ -66,6 +66,7 @@ export function validateConfig(env) {
       ffprobe: (env.FFPROBE_PATH ?? 'ffprobe').trim() || 'ffprobe',
       pollSeconds: poll,
       closing: !/^(off|no|false|0)$/i.test((env.CLOSING_FRAME ?? '').trim()),
+      quality: /^fast$/i.test((env.RENDER_QUALITY ?? '').trim()) ? 'fast' : 'high',
       logo: logo || null,
       audio: audio ? { file: audio, volume } : null,
       ai: model ? { url: aiUrl, model, timeoutSeconds: aiTimeout } : null,

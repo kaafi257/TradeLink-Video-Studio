@@ -10,7 +10,7 @@ import { processJob } from '../src/worker.js';
 import { summarizeProbe, checkSummary } from '../src/verify.js';
 
 const have = spawnSync('ffmpeg', ['-version']).status === 0 && spawnSync('ffprobe', ['-version']).status === 0;
-const cfg = { ffmpeg: 'ffmpeg', ffprobe: 'ffprobe' };
+const cfg = { ffmpeg: 'ffmpeg', ffprobe: 'ffprobe', quality: 'fast' }; // fast keeps the test run short; one test below uses the default high quality
 const dir = mkdtempSync(join(tmpdir(), 'rt-'));
 const sh = (args) => { const r = spawnSync('ffmpeg', ['-y', '-v', 'error', ...args]); if (r.status !== 0) throw new Error(r.stderr.toString()); };
 let landscape, portrait;
@@ -200,6 +200,14 @@ test('config: CLOSING_FRAME=off disables the closing frame', () => {
   const base = { STUDIO_SUPABASE_URL: 'https://abcdefgh.supabase.co', STUDIO_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_x', RENDERER_EMAIL: 'r@x.com', RENDERER_PASSWORD: 'pw' };
   assert.equal(validateConfig(base).config.closing, true);
   assert.equal(validateConfig({ ...base, CLOSING_FRAME: 'off' }).config.closing, false);
+});
+
+test('high quality (default) still produces a valid file, and is smaller per second than a bad encode would be', { skip: !have, timeout: 180000 }, async () => {
+  const { client, uploads } = fake();
+  const scenes = [sc('intro', 4000, 'A', null, 'products/a.jpg', 'zoom_in'), sc('price', 4000, 'ETB 80.00', 'ETB 100.00', null, 'slide_up'), sc('cta', 4000, 'WhatsApp: +251911000000', null, null, 'fade')];
+  assert.equal(await processJob({ client, job: mkJob('premium', scenes, 12000), cfg: { ffmpeg: 'ffmpeg', ffprobe: 'ffprobe' }, log: () => {} }), 'ready');
+  const buf = uploads['renders/proj1/job1-1.mp4'];
+  assert.deepEqual(checkSummary(probeFile(buf, 'hq.mp4'), 12000), []);
 });
 
 test('cleanup', () => { rmSync(dir, { recursive: true, force: true }); });

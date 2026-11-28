@@ -4,6 +4,7 @@ import { useAuth } from '../../lib/auth';
 import { canWriteCatalogue, formatDate, type ImageFolder } from '../../lib/catalogue';
 import { removeImages, saveWithImage } from '../../lib/images';
 import { useImageUrls } from '../../lib/useImageUrls';
+import { Loading } from '../../components/Loading';
 import { useI18n } from '../../i18n/i18n';
 import type { MessageKey } from '../../i18n/en';
 import { Sheet } from '../../components/Sheet';
@@ -76,7 +77,7 @@ export function EntityPage({ cfg }: { cfg: EntityConfig }) {
   }
 
   if (failed) return <p className="error" role="alert">{t('common.loadError')}</p>;
-  if (!rows) return <p className="splash">{t('common.loading')}</p>;
+  if (!rows) return <Loading />;
   return (
     <div className="stack">
       {canWrite && <p><button type="button" className="btn btn-primary big" onClick={() => setEdit('new')}>{t(cfg.text.add)}</button></p>}
