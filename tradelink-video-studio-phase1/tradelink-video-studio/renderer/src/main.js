@@ -58,6 +58,7 @@ async function main() {
   let stop = false;
   process.on('SIGINT', () => { stop = true; log('Stopping after the current job…'); });
   let failures = 0;
+  let lastIdleLog = 0;
   let aiOn = !!cfg.ai;
   while (!stop) {
     const { data, error: e } = await client.rpc('renderer_claim_job');
@@ -82,6 +83,7 @@ async function main() {
         }
       }
       if (args.has('--once')) { log('No queued videos.'); return; }
+      if (Date.now() - lastIdleLog > 3600000) { log('Watching the queue. No queued videos right now.'); lastIdleLog = Date.now(); }
       await sleep(cfg.pollSeconds); continue;
     }
     await processJob({ client, job, cfg, log });

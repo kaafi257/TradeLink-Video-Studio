@@ -105,3 +105,18 @@ Both are off until you set them in `renderer\.env`. The renderer never downloads
 - Scenes join with slide and fade transitions (the total length does not change), text-only scenes sit on a blurred brand-blue copy of the product picture, the price scene is a sale tag with the old price struck through, photos get a light contrast/sharpness lift, and a thin gold progress bar runs along the top.
 - `RENDER_QUALITY=high` (default) encodes at CRF 17, preset medium. A 20-second video takes roughly 20–60 seconds on a normal PC. Set `RENDER_QUALITY=fast` in `.env` if renders feel too slow.
 - Needs a normal recent FFmpeg (xfade filter). The "essentials" build from gyan.dev has it. `npm run check` will tell you if it is missing.
+
+## Automatic rendering (Phase 5 Stage C)
+Do this once, after `npm run check` passes:
+1. Open the `renderer` folder in File Explorer.
+2. Double-click **`install-autostart.bat`**. It runs the setup check first; if the check fails it installs nothing.
+3. When it says "Done", close the window. The renderer is now running hidden in the background and will start again every time you sign in to Windows. No administrator rights are needed.
+
+After that, queued videos render by themselves. Open **`renderer-status.bat`** any time to see if it is running and its last log lines (`renderer.log` in the same folder; it keeps a 2 MB rolling log). Use **`uninstall-autostart.bat`** to turn it off.
+
+Good to know
+- The PC must be on, signed in to Windows and online. A video queued while the PC is off renders when it is next on.
+- Do not move or rename the renderer folder after installing. If you do, run `uninstall-autostart.bat` first and `install-autostart.bat` again afterwards.
+- After you update the renderer files, restart it: run `uninstall-autostart.bat`, then `install-autostart.bat`.
+- You can still render by hand (`npm run once`) while it runs; two renderers never take the same job.
+
