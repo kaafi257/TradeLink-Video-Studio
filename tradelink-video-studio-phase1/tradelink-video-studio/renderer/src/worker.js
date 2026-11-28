@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Buffer } from 'node:buffer';
-import { RenderError, blackArgs, buildRenderArgs, compositeArgs, coverArgs, probeArgs, run } from './ffmpeg.js';
+import { RenderError, backdropArgs, blackArgs, buildRenderArgs, compositeArgs, coverArgs, probeArgs, run } from './ffmpeg.js';
 import { wantsEthiopic } from './layout.js';
 import { checkSummary, parseBlackDetect, pictureNotes, summarizeProbe } from './verify.js';
 
@@ -50,6 +50,7 @@ export async function processJob({ client, job, cfg, log = () => {}, fontDir = F
 
     // 1. images: download each once, then build the blurred-background still
     const imageFiles = new Map();
+    let backdropFile = null;
     let n = 0;
     for (const s of scenes) {
       if (!s.image_path || imageFiles.has(s.image_path)) continue;
@@ -58,11 +59,12 @@ export async function processJob({ client, job, cfg, log = () => {}, fontDir = F
       await writeFile(join(work, raw), await download(client, s.image_path));
       await run(cfg.ffmpeg, compositeArgs(raw, still), { cwd: work });
       imageFiles.set(s.image_path, still);
+      if (!backdropFile) { backdropFile = `backdrop.png`; await run(cfg.ffmpeg, backdropArgs(raw, backdropFile), { cwd: work }); }
       n++;
     }
 
     // 2. the video
-    const { args, textFiles } = buildRenderArgs(scenes, { style, imageFiles, fontFile: 'font.ttf', templateId, logoFile, audio, closing: cfg.closing !== false });
+    const { args, textFiles } = buildRenderArgs(scenes, { style, imageFiles, fontFile: 'font.ttf', templateId, logoFile, audio, closing: cfg.closing !== false, backdropFile, quality: cfg.quality === 'fast' ? 'fast' : 'high' });
     for (const [name, text] of Object.entries(textFiles)) await writeFile(join(work, name), text, 'utf8');
     log('Rendering with FFmpeg…');
     await run(cfg.ffmpeg, args, { cwd: work });

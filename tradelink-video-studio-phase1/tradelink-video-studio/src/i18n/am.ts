@@ -348,6 +348,7 @@ export const am: Record<MessageKey, string> = {
   'vid.ed.copyText': 'መግለጫ እና ሃሽታጎችን ቅዳ',
   'vid.ed.copied': 'ተቀድቷል።',
   'vid.q.title': "የጥራት ምርመራ",
+  'vid.story.title': 'የትዕይንቶች ዝርዝር',
   'vid.q.intro': "ይህን ረቂቅ አሁን ካለው የጸደቀ የካታሎግ መረጃ ጋር ያመሳስላል። ያልተሳካ ምርመራ ወረፋ መያዝን ያግዳል፤ ማስጠንቀቂያ ግን አያግድም።",
   'vid.q.run': "የጥራት ምርመራ አድርግ",
   'vid.q.none': "ገና አልተመረመረም። «ለማቀነባበር ወረፋ ያዝ» ሲጫኑም በራስ-ሰር ይሠራል።",

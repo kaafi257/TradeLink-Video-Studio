@@ -50,6 +50,7 @@ export function layoutScene(scene, styleName, hasImage, templateId = null) {
     : type === 'cta' ? fitSize(scene.headline, tl.ctaSizes ?? [62, 54, 46])
     : centered ? fitSize(scene.headline, [st.hs, 66, 56])
     : st.hs;
+  if (type === 'price' && sanitizeText(scene.headline)) return priceScene(scene, st, tl, headSize);
   const head = block(scene.headline, headSize, hasImage && !centered ? 2 : 3);
   const bodyIsButton = type === 'wholesale' && !!scene.body;
   const body = bodyIsButton ? [] : block(scene.body, st.bs, hasImage && !centered ? 3 : 4);
@@ -99,6 +100,32 @@ export function layoutScene(scene, styleName, hasImage, templateId = null) {
   const motion = hasImage && ['zoom_in', 'zoom_out', 'pan_left', 'pan_right'].includes(scene.animation) ? scene.animation : 'static';
   const textAnim = ['slide_up', 'slide_left', 'reveal', 'none'].includes(scene.animation) ? scene.animation : 'fade';
   return { hasImage, bg: st.bg, boxes, lines, motion, textAnim, fades: scene.animation !== 'none', fadeS: tl.fadeS ?? 0.3 };
+}
+
+/**
+ * Price scene as a sale tag: the new price on a gold tag, and (when there is a sale) the old price above it with a line
+ * through it. Both numbers come straight from the scene, which comes from the approved catalogue. Nothing is invented.
+ */
+function priceScene(scene, st, tl, size) {
+  const cx = W / 2 - 20; // the text centre used by every line
+  const price = sanitizeText(scene.headline);
+  const old = sanitizeText(scene.body ?? '');
+  const oldSize = 58;
+  const pw = Math.min(USABLE + 40, measure(price, size) + 140);
+  const ph = lineHeight(size) + 56;
+  const oldH = old ? lineHeight(oldSize) + 34 : 0;
+  const top = Math.round(H * 0.44 - (oldH + ph) / 2);
+  const boxes = [];
+  const lines = [];
+  if (old) {
+    const ow = measure(old, oldSize);
+    lines.push({ text: old, size: oldSize, y: top, color: '0xdfe6ec', kind: 'body' });
+    boxes.push({ x: Math.round(cx - ow / 2 - 14), y: top + Math.round(oldSize * 0.5), w: Math.round(ow + 28), h: 6, color: '0xe9a914' });
+  }
+  const pillTop = top + oldH;
+  boxes.push({ x: Math.round(cx - pw / 2), y: pillTop, w: Math.round(pw), h: ph, color: '0xe9a914' });
+  lines.push({ text: price, size, y: pillTop + Math.round((ph - lineHeight(size)) / 2) + 6, color: '0x073256', kind: 'head' });
+  return { hasImage: false, bg: st.bg, boxes, lines, motion: 'static', textAnim: ['slide_up', 'slide_left', 'reveal', 'none'].includes(scene.animation) ? scene.animation : 'fade', fades: scene.animation !== 'none', fadeS: tl.fadeS ?? 0.3 };
 }
 
 export function wantsEthiopic(scenes) {

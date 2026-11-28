@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth';
 import { canWriteCatalogue, formatDate } from '../../lib/catalogue';
 import { type VideoProject, type VideoStatus } from '../../lib/videos';
+import { Loading } from '../../components/Loading';
 import { useI18n } from '../../i18n/i18n';
 import type { MessageKey } from '../../i18n/en';
 
@@ -39,7 +40,7 @@ export function Videos() {
         {canWrite && <span className="row"><Link className="btn btn-primary" to="/videos/quick">{t('vid.quick.open')}</Link> <Link className="btn" to="/videos/batch">{t('batch.open')}</Link> <Link className="btn" to="/videos/new">{t('vid.new')}</Link></span>}
       </div>
       {failed && <p role="alert" className="error">{t('common.loadError')}</p>}
-      {rows === null && !failed && <p className="muted">{t('common.loading')}</p>}
+      {rows === null && !failed && <Loading />}
       {rows?.length === 0 && <p className="card muted">{t('vid.empty')}</p>}
       <ul className="vlist">
         {rows?.map((v) => (

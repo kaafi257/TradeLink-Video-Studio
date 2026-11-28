@@ -342,6 +342,7 @@ export const en = {
   'vid.ed.copyText': 'Copy caption and hashtags',
   'vid.ed.copied': 'Copied.',
   'vid.q.title': "Quality check",
+  'vid.story.title': 'Storyboard',
   'vid.q.intro': "Checks this draft against the current approved catalogue data. A failed check blocks queueing; a warning does not.",
   'vid.q.run': "Run quality check",
   'vid.q.none': "Not checked yet. It also runs automatically when you press Queue for rendering.",
